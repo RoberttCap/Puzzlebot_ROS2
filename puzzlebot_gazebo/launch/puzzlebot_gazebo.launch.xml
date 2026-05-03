@@ -6,8 +6,8 @@
     <let name="puzzlebot_bridge_config_path" value="$(find-pkg-share puzzlebot_gazebo)/config/gazebo_bridge.yaml"/>
     <let name="gz_sim_launch_path" value="$(find-pkg-share ros_gz_sim)/launch/gz_sim.launch.py"/>
 
-    <let name="x_pose" value="1.35"/>
-    <let name="y_pose" value="0.0"/>
+    <let name="x_pose" value="1.5"/>
+    <let name="y_pose" value="1.1"/>
 
     <arg name="use_sim_time" default="true"/>
     <arg name="headless" default="false"/>
@@ -34,7 +34,7 @@
           args="-name maze_walls -file $(var maze_model_path)"/>
 
     <node pkg="ros_gz_sim" exec="create" output="screen"
-          args="-name puzzlebot -topic robot_description -x $(var x_pose) -y $(var y_pose) -z 0.01 -Y 0.0"/>
+          args="-name puzzlebot -topic robot_description -x $(var x_pose) -y $(var y_pose) -z 0.01 -Y 3.1416"/>
 
     <node pkg="ros_gz_bridge" exec="parameter_bridge" output="screen">
         <param name="config_file" value="$(var puzzlebot_bridge_config_path)"/>
