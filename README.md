@@ -86,9 +86,7 @@ Contenido principal:
 
 - `launch/puzzlebot_gazebo.launch.xml`: launch principal de simulación.
 - `config/gazebo_bridge.yaml`: bridge para `/clock`, `/cmd_vel`, `/odom`, `/tf`, `/joint_states` y `/scan`.
-- `worlds/empty_with_sensors.sdf`: mundo base.
-- `worlds/maze.world`: mundo de laberinto.
-- `worlds/maze_world.world/model.sdf`: modelo del laberinto insertado en la simulación.
+- `worlds/maze.world`: mundo principal del laberinto. Gazebo lo carga directamente; no se inserta un modelo de laberinto por separado.
 
 ### `puzzlebot_navigation`
 
@@ -101,8 +99,8 @@ Contenido principal:
 - `launch/nav2.launch.xml`: simulación + Nav2.
 - `launch/nav2_core.launch.xml`: núcleo de navegación con Nav2 y RViz.
 - `config/slam_toolbox.yaml`: parámetros de SLAM.
-- `config/nav2_params.yaml`: parámetros de Nav2 y AMCL.
-- `maps/map.yaml` y `maps/map.pgm`: mapa por defecto.
+- `config/nav2_params.yaml`: parámetros de Nav2, AMCL, pose inicial y costmaps.
+- `maps/map.yaml` y `maps/map.pgm`: mapa por defecto alineado con `puzzlebot_gazebo/worlds/maze.world`.
 - `rviz/slam.rviz` y `rviz/nav2.rviz`: vistas de RViz para cada fase.
 
 ---
@@ -290,11 +288,18 @@ ros2 launch puzzlebot_navigation nav2.launch.xml headless:=false
 
 Este flujo levanta:
 
-- Gazebo con el robot.
+- Gazebo con `maze.world` y el robot en la pose inicial configurada.
 - Bridge ROS-Gazebo.
 - AMCL para localización.
 - Costmaps, planner, controller y behavior tree de Nav2.
 - RViz con herramientas para pose inicial y metas.
+
+La pose inicial usada por Gazebo y AMCL se mantiene sincronizada en:
+
+- `puzzlebot_gazebo/launch/puzzlebot_gazebo.launch.xml`
+- `puzzlebot_navigation/config/nav2_params.yaml`
+
+El mapa de navegación está alineado con el mundo mediante el `origin` de `puzzlebot_navigation/maps/map.yaml`.
 
 Para usar un mapa específico:
 
@@ -306,9 +311,11 @@ ros2 launch puzzlebot_navigation nav2.launch.xml \
 
 En RViz:
 
-1. Selecciona `2D Pose Estimate` para indicar la pose inicial del robot.
+1. Usa `2D Pose Estimate` sólo si necesitas corregir manualmente la localización.
 2. Selecciona `Nav2 Goal` para enviar una meta de navegación.
-3. Observa el plan global, el costmap y la trayectoria local.
+3. Observa el plan global, el `LocalCostmap` y la trayectoria local.
+
+La vista `nav2.rviz` muestra el `LocalCostmap` alrededor del robot y deja oculto el `GlobalCostmap` para no cubrir todo el PGM. Nav2 sigue usando el costmap global internamente para planear.
 
 ---
 
@@ -317,7 +324,7 @@ En RViz:
 | Archivo | Propósito |
 | --- | --- |
 | `puzzlebot_description/launch/puzzlebot_description.launch.xml` | Publica la descripción del robot y puede abrir RViz, Gazebo o la GUI de joints. |
-| `puzzlebot_gazebo/launch/puzzlebot_gazebo.launch.xml` | Abre Gazebo, inserta el laberinto, spawnea el robot y activa el bridge. |
+| `puzzlebot_gazebo/launch/puzzlebot_gazebo.launch.xml` | Abre Gazebo con `maze.world`, spawnea el robot y activa el bridge. |
 | `puzzlebot_navigation/launch/slam_core.launch.xml` | Ejecuta `slam_toolbox`, RViz y teleoperación. |
 | `puzzlebot_navigation/launch/slam.launch.xml` | Combina simulación + SLAM. |
 | `puzzlebot_navigation/launch/nav2_core.launch.xml` | Ejecuta Nav2 y RViz usando un mapa. |
@@ -358,7 +365,8 @@ Para probar el stack completo de forma ordenada:
 - `nav2.launch.xml` usa `headless:=true` por defecto, así que usa `headless:=false` si quieres ver Gazebo.
 - Si `teleop_twist_keyboard` no abre, revisa que `xterm` esté instalado.
 - Si RViz no muestra datos, confirma que ejecutaste `source ~/puzzlebot_ws/install/setup.bash`.
-- Si Nav2 no navega, primero fija la pose inicial con `2D Pose Estimate`.
+- Si Nav2 no navega, revisa que la pose inicial de AMCL coincida con el spawn de Gazebo y que el goal esté en una zona libre del mapa.
+- Si cambias el PGM o el `.world`, revisa también el `origin` en `puzzlebot_navigation/maps/map.yaml` para mantener RViz y Gazebo alineados.
 - Si cambias archivos de launch, URDF, config o mapas, recompila con `colcon build --symlink-install` y vuelve a hacer `source install/setup.bash`.
 
 ---
