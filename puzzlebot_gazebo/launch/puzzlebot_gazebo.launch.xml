@@ -5,8 +5,8 @@
     <let name="puzzlebot_bridge_config_path" value="$(find-pkg-share puzzlebot_gazebo)/config/gazebo_bridge.yaml"/>
     <let name="gz_sim_launch_path" value="$(find-pkg-share ros_gz_sim)/launch/gz_sim.launch.py"/>
 
-    <let name="x_pose" value="2.65"/>
-    <let name="y_pose" value="1.35"/>
+    <let name="x_pose" value="1.35"/>
+    <let name="y_pose" value="0.0"/>
     <let name="yaw" value="3.1416"/>
 
     <arg name="use_sim_time" default="true"/>

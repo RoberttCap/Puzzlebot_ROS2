@@ -8,6 +8,7 @@
     <arg name="slam_params_file" default="$(find-pkg-share puzzlebot_navigation)/config/slam_toolbox.yaml" />
     <arg name="launch_rviz" default="true" />
     <arg name="launch_teleop" default="false" />
+    <arg name="teleop" default="$(var launch_teleop)" />
     <arg name="teleop_use_xterm" default="false" />
 
     <include file="$(var puzzlebot_gazebo_launch)" >
@@ -19,7 +20,7 @@
         <arg name="rviz_config_path" value="$(var slam_rviz_config_path)" />
         <arg name="launch_rviz" value="$(var launch_rviz)" />
         <arg name="use_sim_time" value="$(var use_sim_time)" />
-        <arg name="launch_teleop" value="$(var launch_teleop)" />
+        <arg name="launch_teleop" value="$(var teleop)" />
         <arg name="teleop_use_xterm" value="$(var teleop_use_xterm)" />
     </include>
     
