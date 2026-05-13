@@ -8,7 +8,7 @@ amcl:
     alpha5: 0.02
     base_frame_id: "base_footprint"
     beam_skip_distance: 0.5
-    beam_skip_error_threshold: 0.8
+    beam_skip_error_threshold: 0.9
     beam_skip_threshold: 0.3
     do_beamskip: false
     global_frame_id: "map"
@@ -33,7 +33,7 @@ amcl:
     transform_tolerance: 0.2
     update_min_a: 0.1
     update_min_d: 0.1
-    z_hit: 0.7
+    z_hit: 0.8
     z_max: 0.05
     z_rand: 0.2
     z_short: 0.05
