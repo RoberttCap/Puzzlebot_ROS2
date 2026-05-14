@@ -374,3 +374,30 @@ Para probar el stack completo de forma ordenada:
 ## 13) Licencia
 
 Este proyecto incluye un archivo `LICENSE` en la raíz del repositorio.
+
+
+-> puzzlebot_navigation/config/nav2_params.yaml
+Quitar voxel_layer del local_costmap.
+Quitar voxel_layer y obstacle_layer del global_costmap, dejando sólo static_layer e inflation_layer.
+Eliminar secciones completas:
+  collision_monitor
+  velocity_smoother
+Ajustar RPP para laberinto pequeño:
+  bajar lookahead_dist, min_lookahead_dist, max_lookahead_dist
+  activar use_cost_regulated_linear_velocity_scaling
+  reducir regulated_linear_scaling_min_radius
+  reducir rotate_to_heading_min_angle
+Ajustar tolerancias:
+  required_movement_radius de 0.5 a algo menor
+  xy_goal_tolerance menor a 0.1
+  yaw_goal_tolerance más estricto
+En behavior_server, dejar sólo:
+  spin
+  backup
+  wait
+En planner_server:
+  allow_unknown: false
+  tolerance menor, por ejemplo 0.1.
+
+-> README.md
+  Agregar una sección de tabla comparativa del planner global, porque en el repo no encontré una tabla comparativa existente. Pondría una tabla breve comparando NavfnPlanner, SmacPlanner2D y ThetaStar, y justificaría que usan NavfnPlanner.
