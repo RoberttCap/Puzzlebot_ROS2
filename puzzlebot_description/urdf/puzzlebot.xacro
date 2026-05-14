@@ -17,3 +17,6 @@
     mesh_file="${mesh_puzzlebot_lidar}"/> <!-- macro -->
 
 </robot>
+
+
+<!-- For real robot: add conditionals to xacro -->
