@@ -1,20 +1,13 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>puzzlebot_navigation</name>
-  <version>0.0.1</version>
-  <description>Navigation2 stack for Puzzlebot - SLAM and autonomous navigation</description>
+  <name>puzzlebot_real_robot</name>
+  <version>0.0.0</version>
+  <description>Real robot stack for Puzzlebot - REAL ROBOT</description>
   <maintainer email="team@puzzlebot.local">Puzzlebot Team</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
-
-  <!-- Navigation and SLAM dependencies -->
-  <exec_depend>nav2_bringup</exec_depend>
-  <exec_depend>puzzlebot_gazebo</exec_depend>
-  <exec_depend>slam_toolbox</exec_depend>
-  <exec_depend>rviz2</exec_depend>
-  <exec_depend>teleop_twist_keyboard</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

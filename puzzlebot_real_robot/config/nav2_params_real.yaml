@@ -1,0 +1,12 @@
+"
+nav2: parámetros de Nav2 ajustados para el robot físico.
+slam: parámetros de SLAM Toolbox para generar el mapa del entorno físico.
+
+Considerar lo sig: 
+  use_sim_time = false
+  topics reales del LiDAR y odometría
+  frames reales publicados por el robot
+  velocidades y aceleraciones seguras
+  ruido e incertidumbre de sensores
+
+"

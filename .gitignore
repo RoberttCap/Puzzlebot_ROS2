@@ -47,3 +47,4 @@ gzclient.log
 # Temporary files
 *.tmp
 *.temp
+.vscode/

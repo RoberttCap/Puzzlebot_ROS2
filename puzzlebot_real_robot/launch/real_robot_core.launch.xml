@@ -1,0 +1,4 @@
+Debe contener o integrar lo necesario para levantar el hardware 
+del Puzzlebot. Por ejemplo: micro-ROS agent, LiDAR, controlador, 
+odometría, publicación de joint_states y transformaciones estáticas 
+necesarias.
