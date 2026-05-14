@@ -13,7 +13,7 @@
     <visual>
       <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
       <geometry>
-        <mesh filename="file://$(find puzzlebot_description)/meshes/Robot_lidar_base/Puzzlebot_Jetson_Lidar_Edition_Base.stl" scale="1 1 1"/>
+        <mesh filename="${mesh_puzzlebot_chassis}" scale="1 1 1"/>
       </geometry>
       <material name="white">
         <color rgba="1.0 1.0 1.0 1.0"/>
@@ -36,7 +36,7 @@
     <visual>
       <origin xyz="0.0 0.0 0.0" rpy="1.5708 0.0 0.0"/>
       <geometry>
-        <mesh filename="file://$(find puzzlebot_description)/meshes/Wheels/Puzzlebot_Wheel.stl" scale="1 1 1"/>
+        <mesh filename="${mesh_puzzlebot_wheel}" scale="1 1 1"/>
       </geometry>
       <material name="black">
         <color rgba="0.0 0.0 0.0 1.0"/>
@@ -60,7 +60,7 @@
       <origin xyz="0.0 0.0 0.0" rpy="1.5708 0.0 0.0"/>
 
       <geometry>
-        <mesh filename="file://$(find puzzlebot_description)/meshes/Wheels/Puzzlebot_Wheel.stl" scale="1 1 1"/>
+        <mesh filename="${mesh_puzzlebot_wheel}" scale="1 1 1"/>
       </geometry>
       <material name="black">
         <color rgba="0.0 0.0 0.0 1.0"/>
@@ -83,7 +83,7 @@
     <visual>
       <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
       <geometry>
-        <mesh filename="file://$(find puzzlebot_description)/meshes/Components/Puzzlebot_Caster_Wheel.stl" scale="1 1 1"/>
+        <mesh filename="${mesh_puzzlebot_caster}" scale="1 1 1"/>
       </geometry>
       <material name="black">
         <color rgba="1.0 1.0 1.0 1.0"/>
