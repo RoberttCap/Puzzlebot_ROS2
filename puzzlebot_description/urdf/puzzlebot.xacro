@@ -17,3 +17,4 @@
     mesh_file="${mesh_puzzlebot_lidar}"/> <!-- macro -->
 
 </robot>
+
