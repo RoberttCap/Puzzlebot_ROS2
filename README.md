@@ -377,20 +377,12 @@ Este proyecto incluye un archivo `LICENSE` en la raíz del repositorio.
 
 
 -> puzzlebot_navigation/config/nav2_params.yaml
-
-Unificar frames a base_footprint en:
-  bt_navigator
-  local_costmap
-  global_costmap
-  behavior_server
-Cambiar min_y_velocity_threshold: 0.5 a 0.0.
-Reemplazar robot_radius: 0.08 por un footprint rectangular aproximado del Puzzlebot.
 Quitar voxel_layer del local_costmap.
 Quitar voxel_layer y obstacle_layer del global_costmap, dejando sólo static_layer e inflation_layer.
 Eliminar secciones completas:
   collision_monitor
   velocity_smoother
-  Ajustar RPP para laberinto pequeño:
+Ajustar RPP para laberinto pequeño:
   bajar lookahead_dist, min_lookahead_dist, max_lookahead_dist
   activar use_cost_regulated_linear_velocity_scaling
   reducir regulated_linear_scaling_min_radius
