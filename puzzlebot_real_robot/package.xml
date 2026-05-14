@@ -5,7 +5,7 @@
   <version>0.0.0</version>
   <description>Real robot stack for Puzzlebot - REAL ROBOT</description>
   <maintainer email="team@puzzlebot.local">sofiabl</maintainer>
-  <license>MIT</license>
+  <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
