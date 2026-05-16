@@ -1,3 +1,55 @@
+# Colcon / ROS build outputs
+build/
+install/
+log/
+
+# Python cache and test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# CMake / native build artifacts
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+CTestTestfile.cmake
+install_manifest.txt
+
+# Editor and IDE generated files
+.vscode/*.db
+.vscode/*.db-shm
+.vscode/*.db-wal
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# ROS / Gazebo runtime output
+*.bag
+*.db3
+*.mcap
+rosgraph.png
+ogre.log
+gzserver.log
+gzclient.log
+
+# Local Codex agent state
+.codex/
+.agents/
+
+# Temporary files
+*.tmp
+*.temp
+.vscode/
+
+
 .vscode/
 *.db
 
@@ -54,5 +106,3 @@ Thumbs.db
 *.zip
 *.tar
 *.gz
-
-

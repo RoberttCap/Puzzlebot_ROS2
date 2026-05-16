@@ -1,0 +1,3 @@
+Debe lanzar el flujo de SLAM en el robot físico. 
+Este archivo debería reutilizar o incluir el core del robot real 
+y después lanzar SLAM Toolbox con la configuración correspondiente.

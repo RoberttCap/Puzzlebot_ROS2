@@ -13,15 +13,16 @@
     <visual>
       <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
       <geometry>
-        <mesh filename="file://$(find puzzlebot_description)/meshes/Robot_lidar_base/Puzzlebot_Jetson_Lidar_Edition_Base.stl" scale="1 1 1"/>
+        <mesh filename="${mesh_puzzlebot_chassis}" scale="1 1 1"/>
       </geometry>
       <material name="white">
         <color rgba="1.0 1.0 1.0 1.0"/>
       </material>
     </visual>
     <collision>
+      <origin xyz="0.0 0.0 0.02" rpy="0.0 0.0 0.0"/>
       <geometry>
-        <mesh filename="file://$(find puzzlebot_description)/meshes/Robot_lidar_base/Puzzlebot_Jetson_Lidar_Edition_Base.stl" scale="1 1 1"/>
+        <box size="0.20 0.17 0.06"/>
       </geometry>
     </collision>
   </link>
@@ -35,15 +36,16 @@
     <visual>
       <origin xyz="0.0 0.0 0.0" rpy="1.5708 0.0 0.0"/>
       <geometry>
-        <mesh filename="file://$(find puzzlebot_description)/meshes/Wheels/Puzzlebot_Wheel.stl" scale="1 1 1"/>
+        <mesh filename="${mesh_puzzlebot_wheel}" scale="1 1 1"/>
       </geometry>
       <material name="black">
         <color rgba="0.0 0.0 0.0 1.0"/>
       </material>
     </visual>
     <collision>
+      <origin xyz="0.0 0.0 0.0" rpy="1.5708 0.0 0.0"/>
       <geometry>
-        <mesh filename="file://$(find puzzlebot_description)/meshes/Wheels/Puzzlebot_Wheel.stl" scale="1 1 1"/>
+        <cylinder radius="0.05" length="0.035"/>
       </geometry>
     </collision>
   </link>
@@ -58,15 +60,16 @@
       <origin xyz="0.0 0.0 0.0" rpy="1.5708 0.0 0.0"/>
 
       <geometry>
-        <mesh filename="file://$(find puzzlebot_description)/meshes/Wheels/Puzzlebot_Wheel.stl" scale="1 1 1"/>
+        <mesh filename="${mesh_puzzlebot_wheel}" scale="1 1 1"/>
       </geometry>
       <material name="black">
         <color rgba="0.0 0.0 0.0 1.0"/>
       </material>
     </visual>
     <collision>
+      <origin xyz="0.0 0.0 0.0" rpy="1.5708 0.0 0.0"/>
       <geometry>
-        <mesh filename="file://$(find puzzlebot_description)/meshes/Wheels/Puzzlebot_Wheel.stl" scale="1 1 1"/>
+        <cylinder radius="0.05" length="0.035"/>
       </geometry>
     </collision>
   </link>
@@ -80,15 +83,16 @@
     <visual>
       <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
       <geometry>
-        <mesh filename="file://$(find puzzlebot_description)/meshes/Components/Puzzlebot_Caster_Wheel.stl" scale="1 1 1"/>
+        <mesh filename="${mesh_puzzlebot_caster}" scale="1 1 1"/>
       </geometry>
       <material name="black">
         <color rgba="1.0 1.0 1.0 1.0"/>
       </material>
     </visual>
     <collision>
+      <origin xyz="0.0 0.0 0.0065" rpy="0.0 0.0 0.0"/>
       <geometry>
-        <mesh filename="file://$(find puzzlebot_description)/meshes/Components/Puzzlebot_Caster_Wheel.stl" scale="1 1 1"/>
+        <sphere radius="0.0065"/>
       </geometry>
     </collision>
   </link>
@@ -104,7 +108,7 @@
 
   <!-- Right Wheel Joint -->
   <joint name="wheel_r_joint" type="continuous">
-    <origin xyz="0.052 -0.095 -0.0025" rpy="0.0 0.0 0.0"/>
+    <origin xyz="0.052 -0.095 0.0" rpy="0.0 0.0 0.0"/>
     <parent link="base_link"/>
     <child link="wheel_r_link"/>
     <axis xyz="0.0 1.0 0.0"/>
@@ -112,7 +116,7 @@
 
   <!-- Left Wheel Joint -->
   <joint name="wheel_l_joint" type="continuous">
-    <origin xyz="0.052 0.095 -0.0025" rpy="0.0 0.0 0.0"/>
+    <origin xyz="0.052 0.095 0.0" rpy="0.0 0.0 0.0"/>
     <parent link="base_link"/>
     <child link="wheel_l_link"/>
     <axis xyz="0.0 1.0 0.0"/>
