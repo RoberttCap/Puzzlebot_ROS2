@@ -370,34 +370,98 @@ Para probar el stack completo de forma ordenada:
 - Si cambias archivos de launch, URDF, config o mapas, recompila con `colcon build --symlink-install` y vuelve a hacer `source install/setup.bash`.
 
 ---
+## 13) Tablas comparativa de tuning 
 
-## 13) Licencia
+### 13.1 AMCL (Localización)
+
+| Parámetro | Valor anterior | Valor nuevo | Motivo del cambio | Resultado observado |
+| --- | --- | --- | --- | --- |
+| `sigma_hit` | `0.15` | `0.10` | Reducir el ruido considerado en el modelo del LiDAR para mejorar la correspondencia entre el scan y el mapa. | Menos dispersión de partículas y mejor ajuste de la localización sobre el mapa. |
+| `z_hit` | `0.7` | `0.99` | Aumentar el peso de las mediciones correctas del sensor dentro del modelo probabilístico de AMCL. | Localización más precisa en pasillos, esquinas y zonas con paredes cercanas. |
+| `set_initial_pose` | `false` | `true` | Permitir que AMCL arranque desde una pose inicial definida en los parámetros. | Arranque más estable dentro del mapa. |
+| `initial_pose` | `(0, 0, 0)` | `x: 1.35`, `y: 0.0`, `z: 0.0`, `yaw: 3.1416` | Colocar al robot en la posición inicial correspondiente al entorno simulado. | Mejor coincidencia entre la pose estimada, el mapa y la percepción inicial del robot. |
+| `always_reset_initial_pose` | `false` | `true` | Forzar que la pose inicial se reinicie en cada ejecución. | Evita acumulación de errores entre corridas consecutivas. |
+| `use_sim_time` | `false` / inconsistente | `true` | Sincronizar AMCL con el tiempo de simulación publicado en `/clock`. | Localización consistente entre Gazebo, RViz y Nav2. |
+
+---
+
+### 13.2 Planner local / Controller (RPP - FollowPath)
+
+| Parámetro | Valor anterior | Valor nuevo | Motivo del cambio | Resultado observado |
+| --- | --- | --- | --- | --- |
+| `lookahead_dist` | `0.24` | `0.25` | Ajustar la distancia de anticipación del controlador para mejorar el seguimiento de trayectoria. | Movimiento más suave y menos brusco en curvas. |
+| `min_lookahead_dist` | `0.18` | `0.15` | Reducir la distancia mínima de anticipación para reaccionar mejor en espacios estrechos. | Menos oscilaciones en pasillos angostos. |
+| `max_lookahead_dist` | `0.40` | `0.35` | Limitar la anticipación máxima para evitar trayectorias demasiado abiertas en el laberinto. | Mejor seguimiento de ruta en curvas cerradas. |
+| `xy_goal_tolerance` | `0.05` | `0.08` | Ajustar la tolerancia lineal de llegada para evitar fallos por precisión excesiva. | El robot alcanza las metas con mayor estabilidad sin exigir una posición final demasiado estricta. |
+| `required_movement_radius` | `0.5` | `0.2` | Reducir el desplazamiento mínimo requerido para considerar que el robot sigue avanzando. | Menos abortos falsos cuando el robot avanza lentamente en espacios pequeños. |
+| `use_cost_regulated_linear_velocity_scaling` | `false` | `true` | Regular la velocidad lineal según el costo del costmap. | Movimiento más seguro cerca de obstáculos y paredes. |
+| `regulated_linear_scaling_min_radius` | `0.9` | `0.35` | Adaptar la regulación de velocidad a curvas más cerradas. | Mejor comportamiento en pasillos estrechos del maze. |
+| `rotate_to_heading_min_angle` | `0.785` | `0.35` | Reducir el ángulo mínimo para activar corrección de orientación. | Menos giros innecesarios y mejor alineación con la trayectoria. |
+
+---
+
+### 13.3 Costmaps (Local y Global)
+
+| Parámetro | Valor anterior | Valor nuevo | Motivo del cambio | Resultado observado |
+| --- | --- | --- | --- | --- |
+| `local_costmap.plugins` | `["voxel_layer", "inflation_layer"]` | `["obstacle_layer", "inflation_layer"]` | Sustituir la capa 3D por una capa 2D más adecuada para un LiDAR plano. | Costmap local más simple, estable y coherente con el sensor usado. |
+| `global_costmap.plugins` | `["static_layer", "obstacle_layer", "inflation_layer"]` | `["static_layer", "inflation_layer"]` | Eliminar capas dinámicas innecesarias en la planeación global. | Planeación global más estable basada en el mapa estático. |
+| `robot_radius` global | `0.16` | `0.08` | Reducir el margen usado por el costmap global para evitar bloquear pasillos estrechos. | Mejores rutas globales dentro del maze. |
+| `robot_radius` local | `0.16` | `0.0955` | Ajustar el radio local al tamaño aproximado real del Puzzlebot. | Permite navegar por espacios más estrechos sin sobreestimar el tamaño del robot. |
+| `inflation_radius` local | `0.40 – 0.50` | `0.25` | Reducir la zona de seguridad cercana para evitar que los pasillos se cierren artificialmente. | Navegación más cercana a paredes sin bloquear caminos viables. |
+| `inflation_radius` global | `0.50` | `0.20` | Reducir la inflación global para mantener rutas disponibles en espacios angostos. | Mejor generación de rutas dentro del laberinto. |
+| `robot_base_frame` | `base_footprint` | `base_footprint` | Mantener el frame planar del robot como referencia para navegación 2D. | Menos inconsistencias de TF y mejor integración con Nav2. |
+
+---
+
+### 13.4 Planner global
+
+| Planner | Ventajas | Desventajas | Uso en este proyecto |
+| --- | --- | --- | --- |
+| `NavfnPlanner` | Simple, estable y adecuado para mapas 2D tipo occupancy grid. | No genera trayectorias tan suaves como planners más avanzados. | Se mantuvo como planner global porque el entorno es un laberinto 2D y el mapa estático es suficiente para planear rutas funcionales. |
+| `SmacPlanner2D` | Puede generar planes más refinados y configurables. | Requiere más parámetros y tuning adicional. | No se usó para evitar complejidad innecesaria en esta etapa del proyecto. |
+| `ThetaStar` | Puede generar trayectorias más directas y menos restringidas a la cuadrícula. | Puede requerir más cuidado con obstáculos y resolución del mapa. | No se usó porque NavfnPlanner ya resolvía correctamente la planeación global del maze. |
+
+| Parámetro | Valor anterior | Valor nuevo | Motivo del cambio | Resultado observado |
+| --- | --- | --- | --- | --- |
+| `planner_plugins` | variable | `["GridBased"]` | Usar un solo planner global para simplificar la configuración. | Configuración más clara y predecible. |
+| `plugin` | variable | `nav2_navfn_planner/NavfnPlanner` | Usar un planner robusto para mapas 2D. | Rutas funcionales dentro del mapa del maze. |
+| `tolerance` | `0.5` | `0.1` | Reducir la tolerancia del objetivo global. | Mayor precisión en la planeación hacia la meta. |
+| `allow_unknown` | `true` | `false` | Evitar planear rutas por zonas desconocidas. | Navegación más segura dentro del mapa conocido. |
+
+---
+
+### 13.5 Configuración del sistema
+
+| Parámetro | Valor anterior | Valor nuevo | Motivo del cambio | Resultado observado |
+| --- | --- | --- | --- | --- |
+| `use_sim_time` global | inconsistente | consistente en los nodos principales | Alinear los nodos con el tiempo de simulación. | Reducción de errores de sincronización entre Gazebo, RViz y Nav2. |
+| `collision_monitor` | presente | eliminado | No era necesario para la navegación del maze y agregaba complejidad adicional. | Configuración de Nav2 más simple y ligera. |
+| `velocity_smoother` | presente | eliminado | Evitar una dependencia adicional sobre comandos suavizados. | Pipeline de velocidad más directo y menos propenso a conflictos. |
+| `docking_server` | presente | eliminado | No se requiere comportamiento de docking para esta práctica. | Sistema más simple y enfocado en navegación autónoma. |
+| Sensores en Gazebo | duplicados | unificados en el mundo / configuración principal | Evitar doble carga de plugins o sensores. | Simulación más estable. |
+| Colisiones en URDF | meshes STL | primitivas simples | Simplificar las geometrías de colisión para Gazebo. | Mejor comportamiento físico y menos errores de simulación. |
+| `wheel_radius` | `0.5` | `0.05` | Corregir la escala física de las ruedas. | Movimiento más realista del robot diferencial. |
+
+---
+
+### 13.6 Mapa
+
+| Parámetro | Valor anterior | Valor nuevo | Motivo del cambio | Resultado observado |
+| --- | --- | --- | --- | --- |
+| `origin` | `[-0.453, -2.58, 0]` | `[-0.55, -1.67, 0]` | Alinear el mapa con el entorno simulado y la pose inicial del robot. | Mejor correspondencia entre mapa, simulación y localización. |
+| `resolution` | `0.05` | `0.05` | Mantener la escala del mapa usada por Nav2. | Coherencia entre mapa y costmaps. |
+| `occupied_thresh` | `0.65` | `0.65` | Mantener el criterio de celda ocupada. | Obstáculos interpretados de forma estable. |
+| `free_thresh` | `0.25` | `0.25` | Mantener el criterio de espacio libre. | Navegación consistente sobre celdas transitables. |
+
+---
+
+Los ajustes realizados mejoraron la estabilidad de la localización, la suavidad del controlador local y la capacidad de navegación en espacios estrechos. Los cambios más importantes fueron la corrección de la pose inicial de AMCL, la reducción de los radios e inflación de los costmaps, la simplificación de capas innecesarias y el ajuste de los parámetros del Regulated Pure Pursuit para un laberinto pequeño. En conjunto, estos cambios permitieron que el robot siguiera rutas de forma más estable y redujera oscilaciones cerca de paredes y esquinas.
+
+---
+
+## 14) Licencia
 
 Este proyecto incluye un archivo `LICENSE` en la raíz del repositorio.
 
-## CORRECCIONES POR HACER
-### puzzlebot_navigation/config/nav2_params.yaml
-- Quitar voxel_layer del local_costmap.
-- Quitar voxel_layer y obstacle_layer del global_costmap, dejando sólo static_layer e inflation_layer.
-- Eliminar secciones completas:
-  - collision_monitor
-  - velocity_smoother
-- Ajustar RPP para laberinto pequeño:
-  - bajar lookahead_dist, min_lookahead_dist, max_lookahead_dist
-  - activar use_cost_regulated_linear_velocity_scaling
-  - reducir regulated_linear_scaling_min_radius
-  - reducir rotate_to_heading_min_angle
-- Ajustar tolerancias:
-  - required_movement_radius de 0.5 a algo menor
-  - xy_goal_tolerance menor a 0.1
-  - yaw_goal_tolerance más estricto
-- En behavior_server, dejar sólo:
-  - spin
-  - backup
-  - wait
-- En planner_server:
-  - allow_unknown: false
-  - tolerance menor, por ejemplo 0.1.
-
 ### README.md
-  - Agregar una sección de tabla comparativa del planner global, porque en el repo no encontré una tabla comparativa existente. Pondría una tabla breve comparando NavfnPlanner, SmacPlanner2D y ThetaStar, y justificaría que usan NavfnPlanner.
