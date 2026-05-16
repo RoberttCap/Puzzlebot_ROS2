@@ -12,7 +12,7 @@ find_package(ament_cmake REQUIRED)
 # find_package(<dependency> REQUIRED)
 
 install(DIRECTORY launch config maps rviz
-  DESTINATION share/${PROJECT_NAME}
+  DESTINATION share/puzzlebot_navigation
 )
 
 ament_package()
