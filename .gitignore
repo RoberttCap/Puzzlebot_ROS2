@@ -1,16 +1,32 @@
-# Colcon / ROS build outputs
+# =========================================
+# ROS 2 / Colcon
+# =========================================
 build/
 install/
 log/
+.colcon/
+.colcon_ignore
 
-# Python cache and test artifacts
+# =========================================
+# Python
+# =========================================
 __pycache__/
 *.py[cod]
+*.pyc.*
+*.pyo
+*.pyd
 .pytest_cache/
 .coverage
 htmlcov/
 
-# CMake / native build artifacts
+# Virtual environments
+venv/
+.env/
+.envrc
+
+# =========================================
+# CMake / Native build artifacts
+# =========================================
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
@@ -18,20 +34,30 @@ Makefile
 CTestTestfile.cmake
 install_manifest.txt
 
-# Editor and IDE generated files
-.vscode/*.db
-.vscode/*.db-shm
-.vscode/*.db-wal
+# =========================================
+# Editors / IDEs
+# =========================================
+.vscode/
 .idea/
+*.code-workspace
 *.swp
 *.swo
 *~
 
-# OS generated files
+# VSCode databases
+*.db
+*.db-shm
+*.db-wal
+
+# =========================================
+# Operating System files
+# =========================================
 .DS_Store
 Thumbs.db
 
-# ROS / Gazebo runtime output
+# =========================================
+# ROS / Gazebo generated files
+# =========================================
 *.bag
 *.db3
 *.mcap
@@ -40,69 +66,27 @@ ogre.log
 gzserver.log
 gzclient.log
 
-# Local Codex agent state
-.codex/
-.agents/
+# Gazebo / Ignition local configs
+.gz/
+.ignition/
 
-# Temporary files
+# =========================================
+# Temporary / backup files
+# =========================================
 *.tmp
 *.temp
-.vscode/
-
-
-.vscode/
-*.db
-
-build/ 
-install/
-log/
-
-
-.colcon/
-.colcon_ignore
-
-
-**pycache**/
-*.pyc
-*.pyo
-*.pyd
-*.pyc.*
-*.swp
-
-venv/
-.env/
-.envrc
-
-
-CMakeFiles/
-CMakeCache.txt
-cmake_install.cmake
-Makefile
-
-
-.vscode/
-.idea/
-*.code-workspace
-
-
-
-.DS_Store
-Thumbs.db
-
-
-*.log
-*.tmp
 *.bak
+*.log
 
-
-~/.gz/
-~/.ignition/
-
-
-*.db3
-*.bag
-
-
+# =========================================
+# Compressed files
+# =========================================
 *.zip
 *.tar
 *.gz
+
+# =========================================
+# Local AI / agent tools
+# =========================================
+.codex/
+.agents/
