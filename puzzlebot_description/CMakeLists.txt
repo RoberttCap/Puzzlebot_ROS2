@@ -13,11 +13,7 @@ find_package(ament_cmake REQUIRED)
 
 install(
   DIRECTORY urdf rviz meshes launch 
-<<<<<<< HEAD
   DESTINATION share/${PROJECT_NAME}
-=======
-  DESTINATION share/puzzlebot_description
->>>>>>> origin/main
 )
 
 ament_package()
