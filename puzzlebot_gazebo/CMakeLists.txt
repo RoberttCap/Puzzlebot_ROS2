@@ -13,7 +13,7 @@ find_package(ament_cmake REQUIRED)
 
 install(
   DIRECTORY launch worlds config
-  DESTINATION share/${PROJECT_NAME}/
+  DESTINATION share/puzzlebot_gazebo/
 )
 
 ament_package()
