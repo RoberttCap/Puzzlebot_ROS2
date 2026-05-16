@@ -17,7 +17,4 @@ install(
 )
 
 ament_package()
-<<<<<<< HEAD
-=======
 
->>>>>>> origin/main
