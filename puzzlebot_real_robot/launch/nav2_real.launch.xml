@@ -2,16 +2,25 @@
   <arg name="map" default="$(find-pkg-share puzzlebot_real_robot)/maps/map_maze_real.yaml"/>
   <arg name="params_file" default="$(find-pkg-share puzzlebot_real_robot)/config/nav2_params_real.yaml"/>
   <arg name="rviz" default="true"/>
+  <arg name="rviz_config_path" default="$(find-pkg-share puzzlebot_navigation)/rviz/nav2.rviz"/>
   <arg name="use_micro_ros" default="false"/>
   <arg name="use_rplidar" default="false"/>
   <arg name="right_wheel_topic" default="wr"/>
   <arg name="left_wheel_topic" default="wl"/>
+  <arg name="scan_topic" default="scan"/>
+  <arg name="lidar_frame" default="laser_frame"/>
+  <arg name="publish_lidar_correction_tf" default="false"/>
+  <arg name="lidar_corrected_frame" default="laser_frame_real"/>
 
   <include file="$(find-pkg-share puzzlebot_real_robot)/launch/real_robot_core.launch.xml">
     <arg name="use_micro_ros" value="$(var use_micro_ros)"/>
     <arg name="use_rplidar" value="$(var use_rplidar)"/>
     <arg name="right_wheel_topic" value="$(var right_wheel_topic)"/>
     <arg name="left_wheel_topic" value="$(var left_wheel_topic)"/>
+    <arg name="scan_topic" value="$(var scan_topic)"/>
+    <arg name="lidar_frame" value="$(var lidar_frame)"/>
+    <arg name="publish_lidar_correction_tf" value="$(var publish_lidar_correction_tf)"/>
+    <arg name="lidar_corrected_frame" value="$(var lidar_corrected_frame)"/>
   </include>
 
   <include file="$(find-pkg-share nav2_bringup)/launch/bringup_launch.py">
@@ -20,5 +29,7 @@
     <arg name="params_file" value="$(var params_file)"/>
   </include>
 
-  <node if="$(var rviz)" pkg="rviz2" exec="rviz2" name="rviz2" output="screen"/>
+  <node if="$(var rviz)" pkg="rviz2" exec="rviz2" name="nav2_rviz" output="screen" args="-d $(var rviz_config_path)">
+    <param name="use_sim_time" value="false"/>
+  </node>
 </launch>
