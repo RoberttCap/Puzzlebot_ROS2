@@ -12,7 +12,7 @@ find_package(ament_cmake REQUIRED)
 # find_package(<dependency> REQUIRED)
 
 install(
-  DIRECTORY launch config
-  DESTINATION share/${PROJECT_NAME}/
+  DIRECTORY DIRECTORY launch config maps 
+  DESTINATION share/puzzlebot_real_robot
 )
 ament_package()

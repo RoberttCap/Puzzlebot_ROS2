@@ -1,4 +1,88 @@
-Debe contener o integrar lo necesario para levantar el hardware 
-del Puzzlebot. Por ejemplo: micro-ROS agent, LiDAR, controlador, 
-odometría, publicación de joint_states y transformaciones estáticas 
-necesarias.
+<launch>
+  <!-- Hardware/driver switches. Keep optional because exact driver names can vary by robot setup. -->
+  <arg name="use_micro_ros" default="false"/>
+  <arg name="micro_ros_device" default="/dev/ttyACM0"/>
+  <arg name="micro_ros_baudrate" default="115200"/>
+
+  <arg name="use_rplidar" default="false"/>
+  <arg name="rplidar_serial_port" default="/dev/ttyUSB0"/>
+  <arg name="rplidar_serial_baudrate" default="115200"/>
+  <arg name="scan_topic" default="scan"/>
+  <arg name="lidar_frame" default="laser_frame"/>
+
+  <!-- URDF/Xacro. Adjust urdf_file if your description package uses another filename. -->
+  <arg name="urdf_package" default="puzzlebot_description"/>
+  <arg name="urdf_file" default="puzzlebot_jetson_lidar_ed.xacro"/>
+
+  <!-- Real wheel/encoder topics. Change if micro-ROS publishes namespaced topics. -->
+  <arg name="right_wheel_topic" default="wr"/>
+  <arg name="left_wheel_topic" default="wl"/>
+  <arg name="wheel_radius" default="0.05"/>
+  <arg name="wheel_base" default="0.181"/>
+
+  <!-- Only enable this if the URDF does NOT already define the lidar frame or if the physical mounting needs correction. -->
+  <arg name="publish_lidar_static_tf" default="false"/>
+  <arg name="lidar_parent_frame" default="base_link"/>
+  <arg name="lidar_x" default="0.0"/>
+  <arg name="lidar_y" default="0.0"/>
+  <arg name="lidar_z" default="0.12"/>
+  <arg name="lidar_yaw" default="3.14159265"/>
+
+  <node if="$(var use_micro_ros)"
+        pkg="micro_ros_agent"
+        exec="micro_ros_agent"
+        name="micro_ros_agent"
+        output="screen"
+        args="serial --dev $(var micro_ros_device) -b $(var micro_ros_baudrate)"/>
+
+  <node if="$(var use_rplidar)"
+        pkg="rplidar_ros"
+        exec="rplidar_node"
+        name="rplidar_node"
+        output="screen">
+    <param name="serial_port" value="$(var rplidar_serial_port)"/>
+    <param name="serial_baudrate" value="$(var rplidar_serial_baudrate)"/>
+    <param name="frame_id" value="$(var lidar_frame)"/>
+    <remap from="scan" to="$(var scan_topic)"/>
+  </node>
+
+  <node pkg="robot_state_publisher"
+        exec="robot_state_publisher"
+        name="robot_state_publisher"
+        output="screen">
+    <param name="use_sim_time" value="false"/>
+    <param name="robot_description" value="$(command 'xacro $(find-pkg-share $(var urdf_package))/urdf/$(var urdf_file)')"/>
+  </node>
+
+  <node pkg="puzzlebot_real_robot"
+        exec="puzzlebot_localization.py"
+        name="puzzlebot_localization"
+        output="screen">
+    <param name="use_sim_time" value="false"/>
+    <param name="right_wheel_topic" value="$(var right_wheel_topic)"/>
+    <param name="left_wheel_topic" value="$(var left_wheel_topic)"/>
+    <param name="wheel_radius" value="$(var wheel_radius)"/>
+    <param name="wheel_base" value="$(var wheel_base)"/>
+    <param name="odom_frame" value="odom"/>
+    <param name="base_frame" value="base_footprint"/>
+    <param name="publish_tf" value="true"/>
+  </node>
+
+  <node pkg="puzzlebot_real_robot"
+        exec="puzzlebot_joint_state_publisher.py"
+        name="puzzlebot_joint_state_publisher"
+        output="screen">
+    <param name="use_sim_time" value="false"/>
+    <param name="right_wheel_topic" value="$(var right_wheel_topic)"/>
+    <param name="left_wheel_topic" value="$(var left_wheel_topic)"/>
+    <param name="right_wheel_joint" value="wheel_r_joint"/>
+    <param name="left_wheel_joint" value="wheel_l_joint"/>
+  </node>
+
+  <node if="$(var publish_lidar_static_tf)"
+        pkg="tf2_ros"
+        exec="static_transform_publisher"
+        name="lidar_static_tf"
+        output="screen"
+        args="--x $(var lidar_x) --y $(var lidar_y) --z $(var lidar_z) --yaw $(var lidar_yaw) --pitch 0.0 --roll 0.0 --frame-id $(var lidar_parent_frame) --child-frame-id $(var lidar_frame)"/>
+</launch>

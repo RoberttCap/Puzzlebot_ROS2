@@ -1,3 +1,24 @@
-Debe lanzar el flujo de SLAM en el robot físico. 
-Este archivo debería reutilizar o incluir el core del robot real 
-y después lanzar SLAM Toolbox con la configuración correspondiente.
+<launch>
+  <arg name="params_file" default="$(find-pkg-share puzzlebot_real_robot)/config/slam_toolbox_real.yaml"/>
+  <arg name="rviz" default="true"/>
+  <arg name="use_micro_ros" default="false"/>
+  <arg name="use_rplidar" default="false"/>
+  <arg name="right_wheel_topic" default="wr"/>
+  <arg name="left_wheel_topic" default="wl"/>
+
+  <include file="$(find-pkg-share puzzlebot_real_robot)/launch/real_robot_core.launch.xml">
+    <arg name="use_micro_ros" value="$(var use_micro_ros)"/>
+    <arg name="use_rplidar" value="$(var use_rplidar)"/>
+    <arg name="right_wheel_topic" value="$(var right_wheel_topic)"/>
+    <arg name="left_wheel_topic" value="$(var left_wheel_topic)"/>
+  </include>
+
+  <node pkg="slam_toolbox"
+        exec="async_slam_toolbox_node"
+        name="slam_toolbox"
+        output="screen">
+    <param from="$(var params_file)"/>
+  </node>
+
+  <node if="$(var rviz)" pkg="rviz2" exec="rviz2" name="rviz2" output="screen"/>
+</launch>
