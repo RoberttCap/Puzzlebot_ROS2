@@ -15,4 +15,14 @@ install(
   DIRECTORY launch config maps 
   DESTINATION share/puzzlebot_real_robot
 )
+
+install(
+  PROGRAMS
+    scripts/puzzlebot_localization.py
+    scripts/puzzlebot_joint_state_publisher.py
+    scripts/puzzlebot_localizationV2.py
+    scripts/puzzlebot_joint_state_publisherV2.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 ament_package()
