@@ -1,143 +1,84 @@
-import math
+#!/usr/bin/env python3
+"""Wheel joint-state publisher for the physical Puzzlebot.
+
+This node replaces the Gazebo JointStatePublisher plugin when running on hardware.
+It only publishes /joint_states. It does not publish map->odom or odom->base_footprint.
+"""
+
 import rclpy
 from rclpy.node import Node
-from rclpy.time import Time as RclpyTime
-from tf2_ros import TransformBroadcaster, StaticTransformBroadcaster
-from geometry_msgs.msg import TransformStamped
+from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import JointState
+from std_msgs.msg import Float32
 
 
-def yaw_to_quat(yaw: float):
-    return (math.cos(yaw / 2.0), 0.0, 0.0, math.sin(yaw / 2.0))
-
-
-class PuzzlebotPublisher(Node):
-    """
-    Nodo que publica:
-      - TF estatico:  map -> odom
-      - TF dinamico:  odom -> base_footprint  (movimiento circular)
-      - JointState:   wheel_r_joint, wheel_l_joint  (ruedas girando)
-
-    
-    """
-
+class PuzzlebotJointStatePublisher(Node):
     def __init__(self):
-        super().__init__('puzzlebot_publisher')
+        super().__init__('puzzlebot_joint_state_publisher')
 
-        # --- Broadcasters ---
-        self.tf_broadcaster = TransformBroadcaster(self)
-        self.static_broadcaster = StaticTransformBroadcaster(self)
+        self.declare_parameter('right_wheel_topic', 'wr')
+        self.declare_parameter('left_wheel_topic', 'wl')
+        self.declare_parameter('right_wheel_joint', 'wheel_r_joint')
+        self.declare_parameter('left_wheel_joint', 'wheel_l_joint')
+        self.declare_parameter('rate_hz', 30.0)
 
-        # --- Publisher de estados de articulaciones ---
-        self.joint_pub = self.create_publisher(JointState, 'joint_states', 10)
+        self.right_topic = str(self.get_parameter('right_wheel_topic').value)
+        self.left_topic = str(self.get_parameter('left_wheel_topic').value)
+        self.right_joint = str(self.get_parameter('right_wheel_joint').value)
+        self.left_joint = str(self.get_parameter('left_wheel_joint').value)
+        rate_hz = max(1.0, float(self.get_parameter('rate_hz').value))
 
-        # --- TF estatico: ---
-        self.publish_static_map_odom()
+        self.wr = 0.0
+        self.wl = 0.0
+        self.right_angle = 0.0
+        self.left_angle = 0.0
+        self.last_time = self.get_clock().now()
 
-        # --- Estado del robot ---
-        self.t = 0.0          # tiempo acumulado
-        self.wheel_angle = 0.0  # angulo acumulado de las ruedas
+        self.create_subscription(Float32, self.right_topic, self.wr_callback, qos_profile_sensor_data)
+        self.create_subscription(Float32, self.left_topic, self.wl_callback, qos_profile_sensor_data)
+        self.publisher = self.create_publisher(JointState, 'joint_states', 10)
+        self.timer = self.create_timer(1.0 / rate_hz, self.timer_callback)
 
-        # Parametros del movimiento circular
-        self.radius = 0.5   # metros
-        self.omega = 0.5    # rad/s (velocidad angular)
+        self.get_logger().info(
+            f'Joint state publisher ready. Inputs: {self.right_topic}, {self.left_topic}; joints: {self.right_joint}, {self.left_joint}'
+        )
 
-        # Timer a 20 Hz
-        self.dt = 0.05
-        self.timer = self.create_timer(self.dt, self.timer_cb)
+    def wr_callback(self, msg: Float32):
+        self.wr = float(msg.data)
 
-        self.get_logger().info('Puzzlebot Publisher iniciado.')
+    def wl_callback(self, msg: Float32):
+        self.wl = float(msg.data)
 
-    
-    # TF ESTATICO: map -> odom  
-    
-    def publish_static_map_odom(self):
-        tf_msg = TransformStamped()
-    
-        tf_msg.header.stamp = RclpyTime(seconds=0).to_msg()
-        tf_msg.header.frame_id = 'map'
-        tf_msg.child_frame_id = 'odom'
-        tf_msg.transform.translation.x = 0.0
-        tf_msg.transform.translation.y = 0.0
-        tf_msg.transform.translation.z = 0.0
-        tf_msg.transform.rotation.x = 0.0
-        tf_msg.transform.rotation.y = 0.0
-        tf_msg.transform.rotation.z = 0.0
-        tf_msg.transform.rotation.w = 1.0
-        self.static_broadcaster.sendTransform(tf_msg)
-        self.get_logger().info('TF estatico map->odom publicado.')
+    def timer_callback(self):
+        now = self.get_clock().now()
+        dt = (now - self.last_time).nanoseconds * 1e-9
+        self.last_time = now
+        if dt <= 0.0 or dt > 1.0:
+            return
 
-    
-    # CALLBACK del timer (20 Hz)
-    
-    def timer_cb(self):
-        self.t += self.dt
+        self.right_angle += self.wr * dt
+        self.left_angle += self.wl * dt
 
-        # Posicion en el circulo
-        x = self.radius * math.cos(self.omega * self.t)
-        y = self.radius * math.sin(self.omega * self.t)
-
-        
-        yaw = self.omega * self.t + math.pi / 2.0
-
-        # Velocidad lineal del robot = radio * omega (m/s)
-        v = self.radius * self.omega
-        wheel_radius = 0.05  # metros (radio de la rueda)
-        self.wheel_angle += (v / wheel_radius) * self.dt
-
-      
-        self.publish_odom_to_base_footprint(x, y, yaw)
-
-        # Publicar JointState para las ruedas
-        self.publish_joint_states()
-
-    
-    # TF DINAMICO: odom -> base_footprint
-    
-    def publish_odom_to_base_footprint(self, x, y, yaw):
-        tf_msg = TransformStamped()
-        tf_msg.header.stamp = self.get_clock().now().to_msg()
-        tf_msg.header.frame_id = 'odom'
-        tf_msg.child_frame_id = 'base_footprint'
-
-        tf_msg.transform.translation.x = x
-        tf_msg.transform.translation.y = y
-        tf_msg.transform.translation.z = 0.0
-
-       
-        # (w, x, y, z) para una rotacion pura alrededor de Z
-        q = yaw_to_quat(yaw)
-        tf_msg.transform.rotation.w = q[0]
-        tf_msg.transform.rotation.x = q[1]
-        tf_msg.transform.rotation.y = q[2]
-        tf_msg.transform.rotation.z = q[3]
-
-        self.tf_broadcaster.sendTransform(tf_msg)
-
-    
-    # JOINT STATES: ruedas girando
-    
-    def publish_joint_states(self):
-        js = JointState()
-        js.header.stamp = self.get_clock().now().to_msg()
-        js.name = ['wheel_r_joint', 'wheel_l_joint']
-        js.position = [self.wheel_angle, self.wheel_angle]
-        js.velocity = []
-        js.effort = []
-        self.joint_pub.publish(js)
+        msg = JointState()
+        msg.header.stamp = now.to_msg()
+        msg.name = [self.right_joint, self.left_joint]
+        msg.position = [self.right_angle, self.left_angle]
+        msg.velocity = [self.wr, self.wl]
+        msg.effort = []
+        self.publisher.publish(msg)
 
 
 def main(args=None):
     rclpy.init(args=args)
-    node = PuzzlebotPublisher()
+    node = PuzzlebotJointStatePublisher()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
     finally:
+        node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
-        node.destroy_node()
 
 
 if __name__ == '__main__':
