@@ -26,23 +26,19 @@
   <arg name="wheel_radius" default="0.05"/>
   <arg name="wheel_base" default="0.181"/>
 
-  <node if="$(var use_micro_ros)"
-        pkg="micro_ros_agent"
-        exec="micro_ros_agent"
-        name="micro_ros_agent"
-        output="screen"
-        args="serial --dev $(var micro_ros_device) -b $(var micro_ros_baudrate)"/>
+  <include if="$(var use_micro_ros)"
+           file="$(find-pkg-share puzzlebot_ros)/launch/micro_ros_agent.launch.py">
+    <arg name="serial_port" value="$(var micro_ros_device)"/>
+    <arg name="baudrate" value="$(var micro_ros_baudrate)"/>
+  </include>
 
-  <node if="$(var use_rplidar)"
-        pkg="rplidar_ros"
-        exec="rplidar_node"
-        name="rplidar_node"
-        output="screen">
-    <param name="serial_port" value="$(var rplidar_serial_port)"/>
-    <param name="serial_baudrate" value="$(var rplidar_serial_baudrate)"/>
-    <param name="frame_id" value="$(var lidar_frame)"/>
-    <remap from="scan" to="$(var scan_topic)"/>
-  </node>
+  <include if="$(var use_rplidar)"
+           file="$(find-pkg-share rplidar_ros)/launch/rplidar_a1_launch.py">
+    <arg name="serial_port" value="$(var rplidar_serial_port)"/>
+    <arg name="serial_baudrate" value="$(var rplidar_serial_baudrate)"/>
+    <arg name="frame_id" value="$(var lidar_frame)"/>
+    <arg name="topic" value="$(var scan_topic)"/>
+  </include>
 
   <node pkg="robot_state_publisher"
         exec="robot_state_publisher"
