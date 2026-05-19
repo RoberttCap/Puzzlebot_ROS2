@@ -1,231 +1,196 @@
+#!/usr/bin/env python3
+"""Dead-reckoning odometry node for the physical Puzzlebot.
+
+Input:
+  - right/left wheel angular velocities, normally from the robot firmware or micro-ROS.
+Output:
+  - nav_msgs/Odometry on /odom
+  - optional TF odom -> base_footprint
+
+This node must be the only active source of odom -> base_footprint when running the
+physical robot. Do not run a Gazebo diff-drive odometry plugin at the same time.
+"""
+
 import math
-import rclpy
+
 import numpy as np
+import rclpy
+from geometry_msgs.msg import TransformStamped
 from nav_msgs.msg import Odometry
-from rclpy import qos
 from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
+from sensor_msgs.msg import JointState
 from std_msgs.msg import Float32
+from tf2_ros import TransformBroadcaster
 
 
-class Localisation(Node):
+def yaw_to_quaternion(yaw: float):
+    return (0.0, 0.0, math.sin(yaw / 2.0), math.cos(yaw / 2.0))
 
+
+class PuzzlebotLocalization(Node):
     def __init__(self):
-        super().__init__('localisation')
-        
-        # Params
+        super().__init__('puzzlebot_localization')
+
         self.declare_parameter('x0', 0.0)
         self.declare_parameter('y0', 0.0)
         self.declare_parameter('theta0', 0.0)
-
         self.declare_parameter('wheel_radius', 0.05)
-        self.declare_parameter('wheel_base', 0.19)
+        self.declare_parameter('wheel_base', 0.181)
+        self.declare_parameter('right_wheel_topic', 'wr')
+        self.declare_parameter('left_wheel_topic', 'wl')
+        self.declare_parameter('odom_topic', 'odom')
         self.declare_parameter('odom_frame', 'odom')
         self.declare_parameter('base_frame', 'base_footprint')
-        
-        # Noise params 
-        self.declare_parameter('kr',0.002)
-        self.declare_parameter('kl',0.002)
+        self.declare_parameter('publish_tf', True)
+        self.declare_parameter('rate_hz', 30.0)
+        self.declare_parameter('kr', 0.002)
+        self.declare_parameter('kl', 0.002)
 
-        # Read Params
-        self.x = self.get_parameter('x0').value
-        self.y = self.get_parameter('y0').value
-        self.theta = self.get_parameter('theta0').value
-        # Read odom 
-        self.wheel_radius = self.get_parameter('wheel_radius').value
-        self.wheel_base = self.get_parameter('wheel_base').value
-        self.odom_frame = self.get_parameter('odom_frame').value
-        self.base_frame = self.get_parameter('base_frame').value
-        
-        # Dynamic noise params
-        self.kr = self.get_parameter('kr').value
-        self.kl = self.get_parameter('kl').value
-        # self.dt = 1.0/self._rate
-        
-        # Estimated robot state.
-        self.linear_velocity = 0.0
-        self.angular_velocity = 0.0
-        self.yaw = self.theta
+        self.x = float(self.get_parameter('x0').value)
+        self.y = float(self.get_parameter('y0').value)
+        self.yaw = float(self.get_parameter('theta0').value)
+        self.wheel_radius = float(self.get_parameter('wheel_radius').value)
+        self.wheel_base = float(self.get_parameter('wheel_base').value)
+        self.odom_frame = str(self.get_parameter('odom_frame').value)
+        self.base_frame = str(self.get_parameter('base_frame').value)
+        self.publish_tf_enabled = bool(self.get_parameter('publish_tf').value)
+        self.kr = float(self.get_parameter('kr').value)
+        self.kl = float(self.get_parameter('kl').value)
 
-        # Measured wheel angular speeds.
         self.wr = 0.0
         self.wl = 0.0
-        
-        # Covariance matrix P for pose [x, y, theta]
-        self.P = np.zeros((3, 3))
-        
-        # Static Q values 
-        # self.A = 0.00005
-        # self.B = 0.000005
-        # self.C = 0.0001
-
+        self.linear_velocity = 0.0
+        self.angular_velocity = 0.0
+        self.P = np.zeros((3, 3), dtype=float)
         self.last_time = self.get_clock().now()
-        self.dt = 0.0 
-        self.odom_msg = Odometry()
 
-        # Wheel speeds behave like sensor signals, so use sensor-data QoS.
-        self.create_subscription(Float32,'wr', self.wr_callback, qos.qos_profile_sensor_data)
-        self.create_subscription(Float32,'wl', self.wl_callback, qos.qos_profile_sensor_data)
+        right_topic = str(self.get_parameter('right_wheel_topic').value)
+        left_topic = str(self.get_parameter('left_wheel_topic').value)
+        odom_topic = str(self.get_parameter('odom_topic').value)
+        rate_hz = max(1.0, float(self.get_parameter('rate_hz').value))
 
-        self.odom_pub = self.create_publisher(Odometry, 'odom', 10)
-        #Timer
-        self.timer = self.create_timer(0.05, self.timer_callback)
-        self.get_logger().info("Localisation node initialized.")
-        
-    def wr_callback(self, msg:Float32):
-        # Store the latest right wheel speed.
-        self.wr = msg.data
+        self.create_subscription(Float32, right_topic, self.wr_callback, qos_profile_sensor_data)
+        self.create_subscription(Float32, left_topic, self.wl_callback, qos_profile_sensor_data)
+        self.odom_pub = self.create_publisher(Odometry, odom_topic, 10)
+        self.tf_broadcaster = TransformBroadcaster(self)
+        self.timer = self.create_timer(1.0 / rate_hz, self.timer_callback)
 
-    def wl_callback(self, msg:Float32):
-        # Store the latest left wheel speed.
-        self.wl = msg.data
+        self.get_logger().info(
+            f'Puzzlebot localization ready. Inputs: {right_topic}, {left_topic}; output: {odom_topic}; TF: {self.publish_tf_enabled}'
+        )
 
-    def get_robot_vel(self):
-        # Linear and angular velocity from wheel speeds.
-        self.linear_velocity = (self.wheel_radius * (self.wr + self.wl)) / 2.0
-        self.angular_velocity = (self.wheel_radius * (self.wr - self.wl)) / self.wheel_base
+    def wr_callback(self, msg: Float32):
+        self.wr = float(msg.data)
 
-    def update_pose(self):
-        # Integrate the dead-reckoning model using the current velocity.
-        current_time = self.get_clock().now()
-        self.dt = (current_time - self.last_time).nanoseconds * 1e-9
-        self.last_time = current_time
+    def wl_callback(self, msg: Float32):
+        self.wl = float(msg.data)
 
-        self.x += self.linear_velocity * math.cos(self.yaw) * self.dt
-        self.y += self.linear_velocity * math.sin(self.yaw) * self.dt
-        self.yaw += self.angular_velocity * self.dt
+    def compute_robot_velocity(self):
+        self.linear_velocity = self.wheel_radius * (self.wr + self.wl) / 2.0
+        self.angular_velocity = self.wheel_radius * (self.wr - self.wl) / self.wheel_base
+
+    def update_pose(self, dt: float):
+        self.x += self.linear_velocity * math.cos(self.yaw) * dt
+        self.y += self.linear_velocity * math.sin(self.yaw) * dt
+        self.yaw += self.angular_velocity * dt
         self.yaw = math.atan2(math.sin(self.yaw), math.cos(self.yaw))
-        return current_time
-    
-    # New function: covariance propagation 
-    """def update_covariance(self, v, w, dt): 
-        # Jacobian matrix
-        J_h = np.array([
-            [1, 0, -v * dt * np.sin(self.yaw)],
-            [0, 1, v * dt * np.cos(self.yaw)],
-            [0, 0, 1]
-        ])
-        # Static Q noise matrix 
-        Q = np.array([
-            [self.A, self.B, self.B],
-            [self.B, self.A, self.B],
-            [self.B, self.B, self.C]
-        ])
-        # covariance propagation 
-        self.P = J_h @ self.P @ J_h.T + Q
-        """
-    def update_covariance(self, v, w, dt):
-        # Wheel linear displacements during this time step
+
+    def update_covariance(self, dt: float):
         dr = self.wheel_radius * self.wr * dt
         dl = self.wheel_radius * self.wl * dt
-
-        # Differential-drive increments
         dc = (dr + dl) / 2.0
         dtheta = (dr - dl) / self.wheel_base
-
-        # Use the previous/local heading approximation for the covariance model
         theta_mid = self.yaw + dtheta / 2.0
 
-        # Jacobian of the motion model with respect to the previous pose
         J_h = np.array([
             [1.0, 0.0, -dc * math.sin(theta_mid)],
             [0.0, 1.0,  dc * math.cos(theta_mid)],
-            [0.0, 0.0,  1.0]
+            [0.0, 0.0,  1.0],
         ])
 
-        # Jacobian of the motion model with respect to wheel displacements [dr, dl]
         J_delta = np.array([
-            [
-                0.5 * math.cos(theta_mid) - (dc / (2.0 * self.wheel_base)) * math.sin(theta_mid),
-                0.5 * math.cos(theta_mid) + (dc / (2.0 * self.wheel_base)) * math.sin(theta_mid)
-            ],
-            [
-                0.5 * math.sin(theta_mid) + (dc / (2.0 * self.wheel_base)) * math.cos(theta_mid),
-                0.5 * math.sin(theta_mid) - (dc / (2.0 * self.wheel_base)) * math.cos(theta_mid)
-            ],
-            [
-                1.0 / self.wheel_base,
-                -1.0 / self.wheel_base
-            ]
+            [0.5 * math.cos(theta_mid) - (dc / (2.0 * self.wheel_base)) * math.sin(theta_mid),
+             0.5 * math.cos(theta_mid) + (dc / (2.0 * self.wheel_base)) * math.sin(theta_mid)],
+            [0.5 * math.sin(theta_mid) + (dc / (2.0 * self.wheel_base)) * math.cos(theta_mid),
+             0.5 * math.sin(theta_mid) - (dc / (2.0 * self.wheel_base)) * math.cos(theta_mid)],
+            [1.0 / self.wheel_base, -1.0 / self.wheel_base],
         ])
 
-        # Dynamic wheel-noise matrix.
-        # More wheel displacement -> more uncertainty.
-        Sigma_delta = np.array([
+        sigma_delta = np.array([
             [self.kr * abs(dr), 0.0],
-            [0.0, self.kl * abs(dl)]
+            [0.0, self.kl * abs(dl)],
         ])
-
-        # Dynamic process noise in pose space
-        Q = J_delta @ Sigma_delta @ J_delta.T
-
-        # Covariance propagation
+        Q = J_delta @ sigma_delta @ J_delta.T
         self.P = J_h @ self.P @ J_h.T + Q
-
-        # Numerical cleanup: force symmetry
         self.P = 0.5 * (self.P + self.P.T)
 
-    def fill_odom_message(self, current_time):
-        # Create a new Odometry msg
-        odom_msg = Odometry()
-        # Fill with robot pose
-        # Get current time
-        odom_msg.header.stamp = current_time.to_msg()
-        # Use standard TF frame names without a leading slash.
-        odom_msg.header.frame_id = self.odom_frame
-        odom_msg.child_frame_id = self.base_frame
+    def make_odom_msg(self, stamp):
+        msg = Odometry()
+        msg.header.stamp = stamp
+        msg.header.frame_id = self.odom_frame
+        msg.child_frame_id = self.base_frame
+        msg.pose.pose.position.x = self.x
+        msg.pose.pose.position.y = self.y
+        msg.pose.pose.position.z = 0.0
+        qx, qy, qz, qw = yaw_to_quaternion(self.yaw)
+        msg.pose.pose.orientation.x = qx
+        msg.pose.pose.orientation.y = qy
+        msg.pose.pose.orientation.z = qz
+        msg.pose.pose.orientation.w = qw
+        msg.twist.twist.linear.x = self.linear_velocity
+        msg.twist.twist.angular.z = self.angular_velocity
 
-        # x, y, z positions (m)
-        odom_msg.pose.pose.position.x = self.x
-        odom_msg.pose.pose.position.y = self.y
-        odom_msg.pose.pose.position.z = 0.0
+        cov = [0.0] * 36
+        cov[0] = float(self.P[0, 0])
+        cov[1] = float(self.P[0, 1])
+        cov[5] = float(self.P[0, 2])
+        cov[6] = float(self.P[1, 0])
+        cov[7] = float(self.P[1, 1])
+        cov[11] = float(self.P[1, 2])
+        cov[30] = float(self.P[2, 0])
+        cov[31] = float(self.P[2, 1])
+        cov[35] = float(self.P[2, 2])
+        msg.pose.covariance = cov
+        msg.twist.covariance[0] = 0.01
+        msg.twist.covariance[35] = 0.02
+        return msg
 
-        # Convert planar yaw into a quaternion without external deps.
-        odom_msg.pose.pose.orientation.x = 0.0
-        odom_msg.pose.pose.orientation.y = 0.0
-        odom_msg.pose.pose.orientation.z = math.sin(self.yaw / 2.0)
-        odom_msg.pose.pose.orientation.w = math.cos(self.yaw / 2.0)
-
-        # Twist 
-        odom_msg.twist.twist.linear.x = self.linear_velocity
-        odom_msg.twist.twist.angular.z = self.angular_velocity
-
-        self.odom_msg = odom_msg
-        
-    def publish_odometry(self):
-        # Add covariance matrix to odom msg 
-        odom_msg = self.odom_msg
-        odom_msg.pose.covariance = [0.0] * 36
-        
-        odom_msg.pose.covariance[0] = self.P[0, 0]  # Variance in x
-        odom_msg.pose.covariance[7] = self.P[1, 1]  # Variance in y
-        odom_msg.pose.covariance[35] = self.P[2, 2] # Variance in theta    
-        odom_msg.pose.covariance[1] = self.P[0, 1]  # Covariance between x and y
-        odom_msg.pose.covariance[6] = self.P[1, 0]  # Covariance between y and x
-        odom_msg.pose.covariance[5] = self.P[0, 2]  # Covariance between x and theta
-        odom_msg.pose.covariance[30] = self.P[2, 0]  # Covariance between theta and x
-        odom_msg.pose.covariance[11] = self.P[1, 0]  # Covariance between y and x
-        odom_msg.pose.covariance[31] = self.P[1, 2]  # Covariance between y and theta     
-        
-        self.odom_pub.publish(odom_msg)
+    def publish_tf(self, stamp):
+        tf_msg = TransformStamped()
+        tf_msg.header.stamp = stamp
+        tf_msg.header.frame_id = self.odom_frame
+        tf_msg.child_frame_id = self.base_frame
+        tf_msg.transform.translation.x = self.x
+        tf_msg.transform.translation.y = self.y
+        tf_msg.transform.translation.z = 0.0
+        qx, qy, qz, qw = yaw_to_quaternion(self.yaw)
+        tf_msg.transform.rotation.x = qx
+        tf_msg.transform.rotation.y = qy
+        tf_msg.transform.rotation.z = qz
+        tf_msg.transform.rotation.w = qw
+        self.tf_broadcaster.sendTransform(tf_msg)
 
     def timer_callback(self):
-        # Update the pose estimate and publish the odometry message.
-        self.get_robot_vel()
-
-        current_time = self.update_pose()
-
-        if self.dt <= 0.0:
+        now = self.get_clock().now()
+        dt = (now - self.last_time).nanoseconds * 1e-9
+        self.last_time = now
+        if dt <= 0.0 or dt > 1.0:
             return
 
-        self.update_covariance(self.linear_velocity, self.angular_velocity, self.dt)
-        self.fill_odom_message(current_time)
-        self.publish_odometry()
+        self.compute_robot_velocity()
+        self.update_pose(dt)
+        self.update_covariance(dt)
+
+        stamp = now.to_msg()
+        self.odom_pub.publish(self.make_odom_msg(stamp))
+        if self.publish_tf_enabled:
+            self.publish_tf(stamp)
 
 
 def main(args=None):
     rclpy.init(args=args)
-    node = Localisation()
-
+    node = PuzzlebotLocalization()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:

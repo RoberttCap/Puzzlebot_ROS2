@@ -54,7 +54,7 @@
 
   <!-- The V2 localization node is the only source of /odom and odom -> base_footprint in the real robot flow. -->
   <node pkg="puzzlebot_real_robot"
-        exec="puzzlebot_localizationV2.py"
+        exec="puzzlebot_localization.py"
         name="puzzlebot_localization"
         output="screen">
     <param name="use_sim_time" value="false"/>
@@ -70,7 +70,7 @@
 
   <!-- The V2 joint publisher only publishes /joint_states. It does not publish map->odom or odom->base_footprint. -->
   <node pkg="puzzlebot_real_robot"
-        exec="puzzlebot_joint_state_publisherV2.py"
+        exec="puzzlebot_joint_state_publisher.py"
         name="puzzlebot_joint_state_publisher"
         output="screen">
     <param name="use_sim_time" value="false"/>
