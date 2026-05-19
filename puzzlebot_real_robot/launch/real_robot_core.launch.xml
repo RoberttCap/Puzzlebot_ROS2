@@ -1,15 +1,22 @@
 <launch>
   <!-- Core bringup for the physical Puzzlebot. This launch intentionally does not include Gazebo, ros_gz_bridge, /clock, or simulation plugins. -->
   <!--
-      Hardware initialization for the physical robot must be started from the Jetson via SSH.
-      Use the following commands on your local machine or in the helper script:
+      This launch file is intended to be run on the Jetson where the real robot
+      hardware packages are installed.
 
-      ssh puzzlebot@10.42.0.1
+      If you are on the local PC, do not run this command directly unless the
+      Jetson packages are available locally. Instead use the SSH helper script:
+
+      cd /home/karinam/puzzlebot_ws/src/puzzlebot_ws/puzzlebot_real_robot
+      ./scripts/start_real_robot_hardware.sh
+
+      If you need to run the hardware bringup directly on the Jetson, connect
+      to it and launch there:
+
+      ssh -i ~/.ssh/Puzzlebot72 puzzlebot@10.42.0.1
       source /opt/ros/humble/setup.bash
       ros2 launch puzzlebot_ros micro_ros_agent.launch.py serial_port:=/dev/ttyUSB1
       ros2 launch rplidar_ros rplidar_a1_launch.py serial_port:=/dev/ttyUSB0
-
-      The helper script is located at scripts/start_real_robot_hardware.sh
   -->
 
   <!-- Hardware/driver switches. This core launch is intended to start the real robot hardware from a single command. -->
