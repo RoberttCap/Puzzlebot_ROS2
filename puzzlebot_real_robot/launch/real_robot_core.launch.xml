@@ -1,4 +1,90 @@
-Debe contener o integrar lo necesario para levantar el hardware 
-del Puzzlebot. Por ejemplo: micro-ROS agent, LiDAR, controlador, 
-odometría, publicación de joint_states y transformaciones estáticas 
-necesarias.
+<launch>
+  <!-- Core bringup for the physical Puzzlebot. This launch intentionally does not include Gazebo, ros_gz_bridge, /clock, or simulation plugins. -->
+
+  <!-- Hardware/driver switches. Keep them optional because the exact hardware bringup can vary between the Jetson/Hackerboard/laptop setup. -->
+  <arg name="use_micro_ros" default="false"/>
+  <arg name="micro_ros_device" default="/dev/ttyACM0"/>
+  <arg name="micro_ros_baudrate" default="115200"/>
+
+  <arg name="use_rplidar" default="false"/>
+  <arg name="rplidar_serial_port" default="/dev/ttyUSB0"/>
+  <arg name="rplidar_serial_baudrate" default="115200"/>
+  <arg name="scan_topic" default="scan"/>
+  <arg name="lidar_frame" default="laser_frame"/>
+
+  <!-- Optional physical LiDAR orientation correction. Do not publish another base_link -> laser_frame if the URDF already has laser_frame. -->
+  <arg name="publish_lidar_correction_tf" default="false"/>
+  <arg name="lidar_corrected_frame" default="laser_frame_real"/>
+  <arg name="lidar_correction_yaw" default="3.14159265"/>
+
+  <!-- Existing project description package. -->
+  <arg name="urdf_path" default="$(find-pkg-share puzzlebot_description)/urdf/puzzlebot.xacro"/>
+
+  <!-- Real encoder topics from the robot firmware/micro-ROS. Change these if the physical robot publishes namespaced topics. -->
+  <arg name="right_wheel_topic" default="wr"/>
+  <arg name="left_wheel_topic" default="wl"/>
+  <arg name="wheel_radius" default="0.05"/>
+  <arg name="wheel_base" default="0.181"/>
+
+  <node if="$(var use_micro_ros)"
+        pkg="micro_ros_agent"
+        exec="micro_ros_agent"
+        name="micro_ros_agent"
+        output="screen"
+        args="serial --dev $(var micro_ros_device) -b $(var micro_ros_baudrate)"/>
+
+  <node if="$(var use_rplidar)"
+        pkg="rplidar_ros"
+        exec="rplidar_node"
+        name="rplidar_node"
+        output="screen">
+    <param name="serial_port" value="$(var rplidar_serial_port)"/>
+    <param name="serial_baudrate" value="$(var rplidar_serial_baudrate)"/>
+    <param name="frame_id" value="$(var lidar_frame)"/>
+    <remap from="scan" to="$(var scan_topic)"/>
+  </node>
+
+  <node pkg="robot_state_publisher"
+        exec="robot_state_publisher"
+        name="robot_state_publisher"
+        output="screen">
+    <param name="use_sim_time" value="false"/>
+    <param name="robot_description" value="$(command 'xacro $(var urdf_path)')"/>
+  </node>
+
+  <!-- The V2 localization node is the only source of /odom and odom -> base_footprint in the real robot flow. -->
+  <node pkg="puzzlebot_real_robot"
+        exec="puzzlebot_localizationV2.py"
+        name="puzzlebot_localization"
+        output="screen">
+    <param name="use_sim_time" value="false"/>
+    <param name="right_wheel_topic" value="$(var right_wheel_topic)"/>
+    <param name="left_wheel_topic" value="$(var left_wheel_topic)"/>
+    <param name="wheel_radius" value="$(var wheel_radius)"/>
+    <param name="wheel_base" value="$(var wheel_base)"/>
+    <param name="odom_topic" value="odom"/>
+    <param name="odom_frame" value="odom"/>
+    <param name="base_frame" value="base_footprint"/>
+    <param name="publish_tf" value="true"/>
+  </node>
+
+  <!-- The V2 joint publisher only publishes /joint_states. It does not publish map->odom or odom->base_footprint. -->
+  <node pkg="puzzlebot_real_robot"
+        exec="puzzlebot_joint_state_publisherV2.py"
+        name="puzzlebot_joint_state_publisher"
+        output="screen">
+    <param name="use_sim_time" value="false"/>
+    <param name="right_wheel_topic" value="$(var right_wheel_topic)"/>
+    <param name="left_wheel_topic" value="$(var left_wheel_topic)"/>
+    <param name="right_wheel_joint" value="wheel_r_joint"/>
+    <param name="left_wheel_joint" value="wheel_l_joint"/>
+  </node>
+
+  <!-- Use this only if the real scan frame is different from the URDF laser_frame, for example when correcting a 180 degree physical LiDAR mounting. -->
+  <node if="$(var publish_lidar_correction_tf)"
+        pkg="tf2_ros"
+        exec="static_transform_publisher"
+        name="lidar_correction_static_tf"
+        output="screen"
+        args="--x 0.0 --y 0.0 --z 0.0 --yaw $(var lidar_correction_yaw) --pitch 0.0 --roll 0.0 --frame-id laser_frame --child-frame-id $(var lidar_corrected_frame)"/>
+</launch>
