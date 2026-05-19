@@ -13,11 +13,12 @@
   -->
 
   <!-- Hardware/driver switches. This core launch is intended to start the real robot hardware from a single command. -->
-  <arg name="use_micro_ros" default="true"/>
+  <!-- Set use_micro_ros/use_rplidar true only when running on the Jetson or when the required packages are installed locally. -->
+  <arg name="use_micro_ros" default="false"/>
   <arg name="micro_ros_device" default="/dev/ttyUSB1"/>
   <arg name="micro_ros_baudrate" default="115200"/>
 
-  <arg name="use_rplidar" default="true"/>
+  <arg name="use_rplidar" default="false"/>
   <arg name="rplidar_serial_port" default="/dev/ttyUSB0"/>
   <arg name="rplidar_serial_baudrate" default="115200"/>
   <arg name="scan_topic" default="scan"/>
