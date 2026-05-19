@@ -20,6 +20,7 @@ install(
   PROGRAMS
     scripts/puzzlebot_localization.py
     scripts/puzzlebot_joint_state_publisher.py
+    scripts/start_real_robot_hardware.sh
   DESTINATION lib/${PROJECT_NAME}
 )
 
