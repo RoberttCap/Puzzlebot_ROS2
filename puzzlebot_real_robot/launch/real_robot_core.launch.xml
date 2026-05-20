@@ -99,13 +99,3 @@
     <param name="left_wheel_joint" value="wheel_l_joint"/>
   </node>
 
-  <!-- Optional static correction for LiDAR orientation.
-       Do not enable this unless you intentionally want:
-       laser_frame -> laser_frame_real. -->
-  <node if="$(var publish_lidar_correction_tf)"
-        pkg="tf2_ros"
-        exec="static_transform_publisher"
-        name="lidar_correction_static_tf"
-        output="screen"
-        args="--x 0.0 --y 0.0 --z 0.0 --yaw $(var lidar_correction_yaw) --pitch 0.0 --roll 0.0 --frame-id laser_frame --child-frame-id $(var lidar_corrected_frame)"/>
-</launch>
