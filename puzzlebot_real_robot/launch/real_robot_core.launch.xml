@@ -23,7 +23,7 @@
   <arg name="use_rplidar" default="true"/>
 
   <!-- RPLiDAR configuration -->
-  <arg name="rplidar_serial_port" default="/dev/ttyUSB0"/>
+  <arg name="rplidar_serial_port" default="/dev/ttyUSB1"/>
   <arg name="rplidar_serial_baudrate" default="115200"/>
   <arg name="lidar_frame" default="laser_frame"/>
 
