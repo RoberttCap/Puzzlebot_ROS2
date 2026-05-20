@@ -44,7 +44,7 @@
 
   <!-- Physical robot parameters -->
   <arg name="wheel_radius" default="0.05"/>
-  <arg name="wheel_base" default="0.181"/>
+  <arg name="wheel_base" default="0.19"/>
 
   <!-- micro-ROS agent.
        The launch file puzzlebot_ros/micro_ros_agent.launch.py currently
