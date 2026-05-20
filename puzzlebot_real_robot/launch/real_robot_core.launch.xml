@@ -28,13 +28,6 @@
   <arg name="rplidar_serial_baudrate" default="115200"/>
   <arg name="lidar_frame" default="laser_frame"/>
 
-  <!-- Optional physical LiDAR orientation correction.
-       Use only if the real LiDAR mounting is rotated and the URDF frame does
-       not already represent the physical orientation correctly. -->
-  <arg name="publish_lidar_correction_tf" default="false"/>
-  <arg name="lidar_corrected_frame" default="laser_frame_real"/>
-  <arg name="lidar_correction_yaw" default="3.14159265"/>
-
   <!-- Robot description -->
   <arg name="urdf_path" default="$(find-pkg-share puzzlebot_description)/urdf/puzzlebot.xacro"/>
 
