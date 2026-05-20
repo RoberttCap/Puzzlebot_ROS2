@@ -13,7 +13,6 @@
       - robot_state_publisher
       - real odometry node
       - joint_state publisher node
-      - optional LiDAR correction TF
 
     It intentionally does NOT launch Gazebo, ros_gz_bridge, /clock,
     simulation plugins, or simulated odometry.
@@ -40,12 +39,13 @@
   <arg name="wheel_base" default="0.19"/>
 
   <!-- micro-ROS agent.
-       The launch file puzzlebot_ros/micro_ros_agent.launch.py currently
-       declares no arguments, so the serial port is handled inside that launch. -->
+       This launch file must be available on the machine running this launch.
+       On the physical robot, this should be run on the Jetson. -->
   <include if="$(var use_micro_ros)"
            file="$(find-pkg-share puzzlebot_ros)/launch/micro_ros_agent.launch.py"/>
 
-  <!-- Real RPLiDAR driver -->
+  <!-- Real RPLiDAR driver.
+       The LiDAR orientation is already represented correctly in the URDF. -->
   <include if="$(var use_rplidar)"
            file="$(find-pkg-share rplidar_ros)/launch/rplidar_a1_launch.py">
     <arg name="serial_port" value="$(var rplidar_serial_port)"/>
@@ -91,5 +91,4 @@
     <param name="right_wheel_joint" value="wheel_r_joint"/>
     <param name="left_wheel_joint" value="wheel_l_joint"/>
   </node>
-
 </launch>
