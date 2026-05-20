@@ -1,64 +1,66 @@
 <launch>
-  <!-- Core bringup for the physical Puzzlebot. This launch intentionally does not include Gazebo, ros_gz_bridge, /clock, or simulation plugins. -->
   <!--
-      This launch file is intended to be run on the Jetson where the real robot
-      hardware packages are installed.
+    Core bringup for the physical Puzzlebot.
 
-      If you are on the local PC, do not run this command directly unless the
-      Jetson packages are available locally. Instead use the SSH helper script:
+    This launch is intended to run on the Jetson, where the real hardware
+    packages are installed:
+      - puzzlebot_ros
+      - rplidar_ros
 
-      cd /home/karinam/puzzlebot_ws/src/puzzlebot_ws/puzzlebot_real_robot
-      ./scripts/start_real_robot_hardware.sh
+    It starts:
+      - micro-ROS agent
+      - RPLiDAR driver
+      - robot_state_publisher
+      - real odometry node
+      - joint_state publisher node
+      - optional LiDAR correction TF
 
-      If you need to run the hardware bringup directly on the Jetson, connect
-      to it and launch there:
-
-      ssh -i ~/.ssh/Puzzlebot72 puzzlebot@10.42.0.1
-      source /opt/ros/humble/setup.bash
-      ros2 launch puzzlebot_ros micro_ros_agent.launch.py serial_port:=/dev/ttyUSB1
-      ros2 launch rplidar_ros rplidar_a1_launch.py serial_port:=/dev/ttyUSB0
+    It intentionally does NOT launch Gazebo, ros_gz_bridge, /clock,
+    simulation plugins, or simulated odometry.
   -->
 
-  <!-- Hardware/driver switches. This core launch is intended to start the real robot hardware from a single command. -->
-  <!-- Set use_micro_ros/use_rplidar true only when running on the Jetson or when the required packages are installed locally. -->
-  <arg name="use_micro_ros" default="false"/>
-  <arg name="micro_ros_device" default="/dev/ttyUSB1"/>
-  <arg name="micro_ros_baudrate" default="115200"/>
+  <!-- Hardware drivers -->
+  <arg name="use_micro_ros" default="true"/>
+  <arg name="use_rplidar" default="true"/>
 
-  <arg name="use_rplidar" default="false"/>
+  <!-- RPLiDAR configuration -->
   <arg name="rplidar_serial_port" default="/dev/ttyUSB0"/>
   <arg name="rplidar_serial_baudrate" default="115200"/>
-  <arg name="scan_topic" default="scan"/>
   <arg name="lidar_frame" default="laser_frame"/>
 
-  <!-- Optional physical LiDAR orientation correction. Do not publish another base_link -> laser_frame if the URDF already has laser_frame. -->
+  <!-- Optional physical LiDAR orientation correction.
+       Use only if the real LiDAR mounting is rotated and the URDF frame does
+       not already represent the physical orientation correctly. -->
   <arg name="publish_lidar_correction_tf" default="false"/>
   <arg name="lidar_corrected_frame" default="laser_frame_real"/>
   <arg name="lidar_correction_yaw" default="3.14159265"/>
 
-  <!-- Existing project description package. -->
+  <!-- Robot description -->
   <arg name="urdf_path" default="$(find-pkg-share puzzlebot_description)/urdf/puzzlebot.xacro"/>
 
-  <!-- Real encoder topics from the robot firmware/micro-ROS. Change these if the physical robot publishes namespaced topics. -->
+  <!-- Real encoder topics from the robot firmware / micro-ROS -->
   <arg name="right_wheel_topic" default="wr"/>
   <arg name="left_wheel_topic" default="wl"/>
+
+  <!-- Physical robot parameters -->
   <arg name="wheel_radius" default="0.05"/>
   <arg name="wheel_base" default="0.181"/>
 
+  <!-- micro-ROS agent.
+       The launch file puzzlebot_ros/micro_ros_agent.launch.py currently
+       declares no arguments, so the serial port is handled inside that launch. -->
   <include if="$(var use_micro_ros)"
-           file="$(find-pkg-share puzzlebot_ros)/launch/micro_ros_agent.launch.py">
-    <arg name="serial_port" value="$(var micro_ros_device)"/>
-    <arg name="baudrate" value="$(var micro_ros_baudrate)"/>
-  </include>
+           file="$(find-pkg-share puzzlebot_ros)/launch/micro_ros_agent.launch.py"/>
 
+  <!-- Real RPLiDAR driver -->
   <include if="$(var use_rplidar)"
            file="$(find-pkg-share rplidar_ros)/launch/rplidar_a1_launch.py">
     <arg name="serial_port" value="$(var rplidar_serial_port)"/>
     <arg name="serial_baudrate" value="$(var rplidar_serial_baudrate)"/>
     <arg name="frame_id" value="$(var lidar_frame)"/>
-    <arg name="topic" value="$(var scan_topic)"/>
   </include>
 
+  <!-- Publishes the robot TF tree from the URDF and /joint_states -->
   <node pkg="robot_state_publisher"
         exec="robot_state_publisher"
         name="robot_state_publisher"
@@ -67,7 +69,8 @@
     <param name="robot_description" value="$(command 'xacro $(var urdf_path)')"/>
   </node>
 
-  <!-- The V2 localization node is the only source of /odom and odom -> base_footprint in the real robot flow. -->
+  <!-- Real odometry node.
+       This is the only source of /odom and odom -> base_footprint. -->
   <node pkg="puzzlebot_real_robot"
         exec="puzzlebot_localization.py"
         name="puzzlebot_localization"
@@ -83,7 +86,8 @@
     <param name="publish_tf" value="true"/>
   </node>
 
-  <!-- The V2 joint publisher only publishes /joint_states. It does not publish map->odom or odom->base_footprint. -->
+  <!-- Publishes /joint_states for the physical Puzzlebot wheels.
+       It does not publish map -> odom or odom -> base_footprint. -->
   <node pkg="puzzlebot_real_robot"
         exec="puzzlebot_joint_state_publisher.py"
         name="puzzlebot_joint_state_publisher"
@@ -95,7 +99,9 @@
     <param name="left_wheel_joint" value="wheel_l_joint"/>
   </node>
 
-  <!-- Use this only if the real scan frame is different from the URDF laser_frame, for example when correcting a 180 degree physical LiDAR mounting. -->
+  <!-- Optional static correction for LiDAR orientation.
+       Do not enable this unless you intentionally want:
+       laser_frame -> laser_frame_real. -->
   <node if="$(var publish_lidar_correction_tf)"
         pkg="tf2_ros"
         exec="static_transform_publisher"
