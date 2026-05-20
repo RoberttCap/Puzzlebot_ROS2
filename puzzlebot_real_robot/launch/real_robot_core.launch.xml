@@ -28,13 +28,6 @@
   <arg name="rplidar_serial_baudrate" default="115200"/>
   <arg name="lidar_frame" default="laser_frame"/>
 
-  <!-- Optional physical LiDAR orientation correction.
-       Use only if the real LiDAR mounting is rotated and the URDF frame does
-       not already represent the physical orientation correctly. -->
-  <arg name="publish_lidar_correction_tf" default="false"/>
-  <arg name="lidar_corrected_frame" default="laser_frame_real"/>
-  <arg name="lidar_correction_yaw" default="3.14159265"/>
-
   <!-- Robot description -->
   <arg name="urdf_path" default="$(find-pkg-share puzzlebot_description)/urdf/puzzlebot.xacro"/>
 
@@ -44,7 +37,7 @@
 
   <!-- Physical robot parameters -->
   <arg name="wheel_radius" default="0.05"/>
-  <arg name="wheel_base" default="0.181"/>
+  <arg name="wheel_base" default="0.19"/>
 
   <!-- micro-ROS agent.
        The launch file puzzlebot_ros/micro_ros_agent.launch.py currently
@@ -99,13 +92,3 @@
     <param name="left_wheel_joint" value="wheel_l_joint"/>
   </node>
 
-  <!-- Optional static correction for LiDAR orientation.
-       Do not enable this unless you intentionally want:
-       laser_frame -> laser_frame_real. -->
-  <node if="$(var publish_lidar_correction_tf)"
-        pkg="tf2_ros"
-        exec="static_transform_publisher"
-        name="lidar_correction_static_tf"
-        output="screen"
-        args="--x 0.0 --y 0.0 --z 0.0 --yaw $(var lidar_correction_yaw) --pitch 0.0 --roll 0.0 --frame-id laser_frame --child-frame-id $(var lidar_corrected_frame)"/>
-</launch>
