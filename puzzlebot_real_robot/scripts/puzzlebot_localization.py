@@ -44,6 +44,8 @@ class PuzzlebotLocalization(Node):
         self.declare_parameter('base_frame', 'base_footprint')
         self.declare_parameter('publish_tf', True)
         self.declare_parameter('rate_hz', 30.0)
+        self.declare_parameter('right_wheel_scale', 1.0)
+        self.declare_parameter('left_wheel_scale', 1.0)
         self.declare_parameter('kr', 0.002)
         self.declare_parameter('kl', 0.002)
 
@@ -55,6 +57,8 @@ class PuzzlebotLocalization(Node):
         self.odom_frame = str(self.get_parameter('odom_frame').value)
         self.base_frame = str(self.get_parameter('base_frame').value)
         self.publish_tf_enabled = bool(self.get_parameter('publish_tf').value)
+        self.right_wheel_scale = float(self.get_parameter('right_wheel_scale').value)
+        self.left_wheel_scale = float(self.get_parameter('left_wheel_scale').value)
         self.kr = float(self.get_parameter('kr').value)
         self.kl = float(self.get_parameter('kl').value)
 
@@ -87,18 +91,22 @@ class PuzzlebotLocalization(Node):
         self.wl = float(msg.data)
 
     def compute_robot_velocity(self):
-        self.linear_velocity = self.wheel_radius * (self.wr + self.wl) / 2.0
-        self.angular_velocity = self.wheel_radius * (self.wr - self.wl) / self.wheel_base
+        wr = self.wr * self.right_wheel_scale
+        wl = self.wl * self.left_wheel_scale
+        self.linear_velocity = self.wheel_radius * (wr + wl) / 2.0
+        self.angular_velocity = self.wheel_radius * (wr - wl) / self.wheel_base
 
     def update_pose(self, dt: float):
-        self.x += self.linear_velocity * math.cos(self.yaw) * dt
-        self.y += self.linear_velocity * math.sin(self.yaw) * dt
-        self.yaw += self.angular_velocity * dt
+        delta_yaw = self.angular_velocity * dt
+        yaw_mid = self.yaw + delta_yaw / 2.0
+        self.x += self.linear_velocity * math.cos(yaw_mid) * dt
+        self.y += self.linear_velocity * math.sin(yaw_mid) * dt
+        self.yaw += delta_yaw
         self.yaw = math.atan2(math.sin(self.yaw), math.cos(self.yaw))
 
     def update_covariance(self, dt: float):
-        dr = self.wheel_radius * self.wr * dt
-        dl = self.wheel_radius * self.wl * dt
+        dr = self.wheel_radius * self.wr * self.right_wheel_scale * dt
+        dl = self.wheel_radius * self.wl * self.left_wheel_scale * dt
         dc = (dr + dl) / 2.0
         dtheta = (dr - dl) / self.wheel_base
         theta_mid = self.yaw + dtheta / 2.0
