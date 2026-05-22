@@ -23,6 +23,9 @@
   <include if="$(var bringup_core)" file="$(find-pkg-share puzzlebot_real_robot)/launch/real_robot_core.launch.xml">
     <arg name="use_sim_time" value="$(var use_sim_time)"/>
     <arg name="use_micro_ros" value="$(var use_micro_ros)"/>
+    <arg name="micro_ros_device" value="$(var micro_ros_device)"/>
+    <arg name="micro_ros_baudrate" value="$(var micro_ros_baudrate)"/>
+
     <arg name="use_rplidar" value="$(var use_rplidar)"/>
     <arg name="right_wheel_topic" value="$(var right_wheel_topic)"/>
     <arg name="left_wheel_topic" value="$(var left_wheel_topic)"/>
