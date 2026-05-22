@@ -44,6 +44,8 @@
   <arg name="right_wheel_scale" default="1.0"/>
   <arg name="left_wheel_scale" default="1.0"/>
   <arg name="publish_odom_tf" default="true"/>
+  <arg name="use_localization" default="true"/>
+  <arg name="use_joint_state_publisher" default="true"/>
 
   <!-- micro-ROS agent. On the physical robot, this should run on the Jetson. -->
   <node if="$(var use_micro_ros)"
