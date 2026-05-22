@@ -10,7 +10,6 @@ amcl:
     odom_frame_id: odom
     global_frame_id: map
     scan_topic: /scan
-    map_topic: map
     laser_model_type: likelihood_field
     max_beams: 60
     min_particles: 200
@@ -221,10 +220,9 @@ behavior_server:
       plugin: "nav2_behaviors/DriveOnHeading"
     wait:
       plugin: "nav2_behaviors/Wait"
-    local_frame: odom
-    global_frame: map
+    global_frame: odom
     robot_base_frame: base_footprint
-    transform_timeout: 0.1
+    transform_timeout: 0.1 #transform_tolerance: 0.1
     simulate_ahead_time: 2.0
     max_rotational_vel: 0.45
     min_rotational_vel: 0.10
