@@ -45,6 +45,7 @@
   <arg name="wheel_base" default="0.19"/>
   <arg name="right_wheel_scale" default="1.0"/>
   <arg name="left_wheel_scale" default="1.0"/>
+  <arg name="publish_odom_tf" default="true"/>
 
   <!-- micro-ROS agent. On the physical robot, this should run on the Jetson. -->
   <node if="$(var use_micro_ros)"
@@ -88,7 +89,7 @@
     <param name="odom_topic" value="odom"/>
     <param name="odom_frame" value="odom"/>
     <param name="base_frame" value="base_footprint"/>
-    <param name="publish_tf" value="true"/>
+    <param name="publish_tf" value="$(var publish_odom_tf)"/>
   </node>
 
   <!-- Publishes /joint_states for the physical Puzzlebot wheels.
