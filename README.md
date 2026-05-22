@@ -62,6 +62,7 @@ puzzlebot_ws/
 │   └── rviz/
 ├── LICENSE
 └── README.md
+└── README_Real_Robot.md
 ```
 
 ### `puzzlebot_description`
@@ -457,20 +458,6 @@ Para probar el stack completo de forma ordenada:
 ---
 
 Los ajustes realizados mejoraron la estabilidad de la localización, la suavidad del controlador local y la capacidad de navegación en espacios estrechos. Los cambios más importantes fueron la corrección de la pose inicial de AMCL, la reducción de los radios e inflación de los costmaps, la simplificación de capas innecesarias y el ajuste de los parámetros del Regulated Pure Pursuit para un laberinto pequeño. En conjunto, estos cambios permitieron que el robot siguiera rutas de forma más estable y redujera oscilaciones cerca de paredes y esquinas.
-
----
-
----
-
-## 14) Migración a Robot Físico (Puzzlebot Real)
-
-Esta sección documenta el proceso de migración del stack de simulación al robot físico real usando una **Jetson Nano**, un **LiDAR RPLIDAR A1** y encoders conectados mediante **micro-ROS**.
-
----
-
-### 14.1 Nuevo paquete: `puzzlebot_real_robot`
-
-Se creó un paquete dedicado exclusivamente al hardware físico, separando completamente la lógica de simulación:
 
 ---
 

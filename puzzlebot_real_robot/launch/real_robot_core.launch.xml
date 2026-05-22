@@ -7,25 +7,22 @@
       - micro_ros_agent
       - rplidar_ros
 
-    It starts:
-      - micro-ROS agent
-      - RPLiDAR driver
-      - robot_state_publisher
-      - real odometry node
-      - joint_state publisher node
-
-    It intentionally does NOT launch Gazebo, ros_gz_bridge, /clock,
-    simulation plugins, or simulated odometry.
+    Debug strategy:
+      1. First run with localization and joint_state_publisher disabled.
+         This exposes the real firmware topics without creating assumed /wr /wl topics.
+      2. After confirming the real encoder topic names, enable localization
+         and joint_state_publisher.
   -->
 
-  <!-- Hardware drivers -->
+  <!-- Hardware driver switches -->
   <arg name="use_micro_ros" default="true"/>
   <arg name="use_rplidar" default="true"/>
   <arg name="use_sim_time" default="false"/>
 
-  <!-- RPLiDAR configuration -->
+  <arg name="use_rplidar" default="true"/>
   <arg name="rplidar_serial_port" default="/dev/ttyUSB1"/>
   <arg name="rplidar_serial_baudrate" default="115200"/>
+  <arg name="scan_topic" default="scan"/>
   <arg name="lidar_frame" default="laser_frame"/>
 
   <!-- micro-ROS Agent configuration -->
@@ -34,6 +31,7 @@
   <arg name="micro_ros_baudrate" default="115200"/>
 
   <!-- Robot description -->
+  <arg name="use_robot_state_publisher" default="true"/>
   <arg name="urdf_path" default="$(find-pkg-share puzzlebot_description)/urdf/puzzlebot.xacro"/>
 
   <!-- Real encoder topics from the robot firmware / micro-ROS -->
@@ -55,17 +53,21 @@
         output="screen"
         args="$(var micro_ros_transport) --dev $(var micro_ros_device) -b $(var micro_ros_baudrate)"/>
 
-  <!-- Real RPLiDAR driver.
-       The LiDAR orientation is already represented correctly in the URDF. -->
-  <include if="$(var use_rplidar)"
-         file="$(find-pkg-share rplidar_ros)/launch/rplidar_a1_launch.py">
-  <arg name="serial_port" value="$(var rplidar_serial_port)"/>
-  <arg name="serial_baudrate" value="$(var rplidar_serial_baudrate)"/>
-  <arg name="frame_id" value="$(var lidar_frame)"/>
-</include>
+  <!-- Real RPLiDAR driver. -->
+  <node if="$(var use_rplidar)"
+        pkg="rplidar_ros"
+        exec="rplidar_node"
+        name="rplidar_node"
+        output="screen">
+    <param name="serial_port" value="$(var rplidar_serial_port)"/>
+    <param name="serial_baudrate" value="$(var rplidar_serial_baudrate)"/>
+    <param name="frame_id" value="$(var lidar_frame)"/>
+    <remap from="scan" to="$(var scan_topic)"/>
+  </node>
 
-  <!-- Publishes the robot TF tree from the URDF and /joint_states -->
-  <node pkg="robot_state_publisher"
+  <!-- Publishes robot_description and fixed/dynamic URDF transforms from /joint_states. -->
+  <node if="$(var use_robot_state_publisher)"
+        pkg="robot_state_publisher"
         exec="robot_state_publisher"
         name="robot_state_publisher"
         output="screen">
@@ -73,9 +75,11 @@
     <param name="robot_description" value="$(command 'xacro $(var urdf_path)')"/>
   </node>
 
-  <!-- Real odometry node.
-       This is the only source of /odom and odom -> base_footprint. -->
-  <node pkg="puzzlebot_real_robot"
+  <!-- Dead reckoning odometry.
+       This should be the only source of /odom and odom -> base_footprint
+       when enabled. -->
+  <node if="$(var use_localization)"
+        pkg="puzzlebot_real_robot"
         exec="puzzlebot_localization.py"
         name="puzzlebot_localization"
         output="screen">
@@ -92,9 +96,10 @@
     <param name="publish_tf" value="$(var publish_odom_tf)"/>
   </node>
 
-  <!-- Publishes /joint_states for the physical Puzzlebot wheels.
-       It does not publish map -> odom or odom -> base_footprint. -->
-  <node pkg="puzzlebot_real_robot"
+  <!-- Wheel joint state publisher.
+       This only publishes /joint_states, not odom -> base_footprint. -->
+  <node if="$(var use_joint_state_publisher)"
+        pkg="puzzlebot_real_robot"
         exec="puzzlebot_joint_state_publisher.py"
         name="puzzlebot_joint_state_publisher"
         output="screen">
