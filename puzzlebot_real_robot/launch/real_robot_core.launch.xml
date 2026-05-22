@@ -4,7 +4,7 @@
 
     This launch is intended to run on the Jetson, where the real hardware
     packages are installed:
-      - puzzlebot_ros
+      - micro_ros_agent
       - rplidar_ros
 
     It starts:
@@ -21,28 +21,39 @@
   <!-- Hardware drivers -->
   <arg name="use_micro_ros" default="true"/>
   <arg name="use_rplidar" default="true"/>
+  <arg name="use_sim_time" default="false"/>
 
   <!-- RPLiDAR configuration -->
   <arg name="rplidar_serial_port" default="/dev/ttyUSB1"/>
   <arg name="rplidar_serial_baudrate" default="115200"/>
   <arg name="lidar_frame" default="laser_frame"/>
 
+  <!-- micro-ROS Agent configuration -->
+  <arg name="micro_ros_transport" default="serial"/>
+  <arg name="micro_ros_device" default="/dev/ttyUSB0"/>
+  <arg name="micro_ros_baudrate" default="115200"/>
+
   <!-- Robot description -->
   <arg name="urdf_path" default="$(find-pkg-share puzzlebot_description)/urdf/puzzlebot.xacro"/>
 
   <!-- Real encoder topics from the robot firmware / micro-ROS -->
-  <arg name="right_wheel_topic" default="wr"/>
-  <arg name="left_wheel_topic" default="wl"/>
+  <arg name="right_wheel_topic" default="/VelocityEncR"/>
+  <arg name="left_wheel_topic" default="/VelocityEncL"/>
 
   <!-- Physical robot parameters -->
   <arg name="wheel_radius" default="0.05"/>
   <arg name="wheel_base" default="0.19"/>
+  <arg name="right_wheel_scale" default="1.0"/>
+  <arg name="left_wheel_scale" default="1.0"/>
+  <arg name="publish_odom_tf" default="true"/>
 
-  <!-- micro-ROS agent.
-       This launch file must be available on the machine running this launch.
-       On the physical robot, this should be run on the Jetson. -->
-  <include if="$(var use_micro_ros)"
-         file="$(find-pkg-share puzzlebot_ros)/micro_ros_agent.launch.py"/>
+  <!-- micro-ROS agent. On the physical robot, this should run on the Jetson. -->
+  <node if="$(var use_micro_ros)"
+        pkg="micro_ros_agent"
+        exec="micro_ros_agent"
+        name="micro_ros_agent"
+        output="screen"
+        args="$(var micro_ros_transport) --dev $(var micro_ros_device) -b $(var micro_ros_baudrate)"/>
 
   <!-- Real RPLiDAR driver.
        The LiDAR orientation is already represented correctly in the URDF. -->
@@ -58,7 +69,7 @@
         exec="robot_state_publisher"
         name="robot_state_publisher"
         output="screen">
-    <param name="use_sim_time" value="false"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
     <param name="robot_description" value="$(command 'xacro $(var urdf_path)')"/>
   </node>
 
@@ -68,15 +79,17 @@
         exec="puzzlebot_localization.py"
         name="puzzlebot_localization"
         output="screen">
-    <param name="use_sim_time" value="false"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
     <param name="right_wheel_topic" value="$(var right_wheel_topic)"/>
     <param name="left_wheel_topic" value="$(var left_wheel_topic)"/>
     <param name="wheel_radius" value="$(var wheel_radius)"/>
     <param name="wheel_base" value="$(var wheel_base)"/>
+    <param name="right_wheel_scale" value="$(var right_wheel_scale)"/>
+    <param name="left_wheel_scale" value="$(var left_wheel_scale)"/>
     <param name="odom_topic" value="odom"/>
     <param name="odom_frame" value="odom"/>
     <param name="base_frame" value="base_footprint"/>
-    <param name="publish_tf" value="true"/>
+    <param name="publish_tf" value="$(var publish_odom_tf)"/>
   </node>
 
   <!-- Publishes /joint_states for the physical Puzzlebot wheels.
@@ -85,7 +98,7 @@
         exec="puzzlebot_joint_state_publisher.py"
         name="puzzlebot_joint_state_publisher"
         output="screen">
-    <param name="use_sim_time" value="false"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
     <param name="right_wheel_topic" value="$(var right_wheel_topic)"/>
     <param name="left_wheel_topic" value="$(var left_wheel_topic)"/>
     <param name="right_wheel_joint" value="wheel_r_joint"/>
