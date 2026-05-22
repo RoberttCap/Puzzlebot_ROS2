@@ -460,8 +460,23 @@ Los ajustes realizados mejoraron la estabilidad de la localización, la suavidad
 
 ---
 
+---
+
+## 14) Migración a Robot Físico (Puzzlebot Real)
+
+Esta sección documenta el proceso de migración del stack de simulación al robot físico real usando una **Jetson Nano**, un **LiDAR RPLIDAR A1** y encoders conectados mediante **micro-ROS**.
+
+---
+
+### 14.1 Nuevo paquete: `puzzlebot_real_robot`
+
+Se creó un paquete dedicado exclusivamente al hardware físico, separando completamente la lógica de simulación:
+
+---
+
 ## 14) Licencia
 
 Este proyecto incluye un archivo `LICENSE` en la raíz del repositorio.
 
 ### README.md
+

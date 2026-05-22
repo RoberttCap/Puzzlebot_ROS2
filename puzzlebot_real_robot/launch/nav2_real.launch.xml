@@ -1,54 +1,39 @@
+<?xml version="1.0"?>
+<!--
+  Navigation bringup for the physical Puzzlebot.
+
+  This launch is intended to run on the robot computer, where micro-ROS and
+  rplidar_ros are available. For running Nav2 from a remote PC while the Jetson
+  runs the hardware core, use nav2_remote.launch.xml.
+-->
 <launch>
-  <arg name="map" default="$(find-pkg-share puzzlebot_real_robot)/maps/map_maze_real.yaml"/>
-  <arg name="params_file" default="$(find-pkg-share puzzlebot_real_robot)/config/nav2_params_real.yaml"/>
-  <arg name="rviz" default="true"/>
-  <arg name="rviz_config_path" default="$(find-pkg-share puzzlebot_navigation)/rviz/nav2.rviz"/>
-
-  <arg name="use_micro_ros" default="true"/>
-  <arg name="micro_ros_device" default="/dev/ttyUSB0"/>
-  <arg name="micro_ros_baudrate" default="115200"/>
-
-  <arg name="use_rplidar" default="true"/>
-  <arg name="rplidar_serial_port" default="/dev/ttyUSB1"/>
-  <arg name="rplidar_serial_baudrate" default="115200"/>
-
-  <arg name="scan_topic" default="scan"/>
-  <arg name="lidar_frame" default="laser_frame"/>
-
-  <arg name="use_localization" default="false"/>
-  <arg name="use_joint_state_publisher" default="false"/>
-  <arg name="right_wheel_topic" default="wr"/>
-  <arg name="left_wheel_topic" default="wl"/>
+  <arg name="use_sim_time" default="false"/>
+  <arg name="map"
+       default="$(find-pkg-share puzzlebot_real_robot)/maps/map_maze_real.yaml"
+       description="Absolute path to the real map yaml"/>
+  <arg name="autostart" default="true"/>
+  <arg name="use_composition" default="False"/>
 
   <include file="$(find-pkg-share puzzlebot_real_robot)/launch/real_robot_core.launch.xml">
-    <arg name="use_micro_ros" value="$(var use_micro_ros)"/>
-    <arg name="micro_ros_device" value="$(var micro_ros_device)"/>
-    <arg name="micro_ros_baudrate" value="$(var micro_ros_baudrate)"/>
-
-    <arg name="use_rplidar" value="$(var use_rplidar)"/>
-    <arg name="rplidar_serial_port" value="$(var rplidar_serial_port)"/>
-    <arg name="rplidar_serial_baudrate" value="$(var rplidar_serial_baudrate)"/>
-    <arg name="scan_topic" value="$(var scan_topic)"/>
-    <arg name="lidar_frame" value="$(var lidar_frame)"/>
-
-    <arg name="use_localization" value="$(var use_localization)"/>
-    <arg name="use_joint_state_publisher" value="$(var use_joint_state_publisher)"/>
-    <arg name="right_wheel_topic" value="$(var right_wheel_topic)"/>
-    <arg name="left_wheel_topic" value="$(var left_wheel_topic)"/>
+    <arg name="use_sim_time" value="$(var use_sim_time)"/>
   </include>
+
+  <let name="nav2_params"
+       value="$(find-pkg-share puzzlebot_real_robot)/config/nav2_params_real.yaml"/>
 
   <include file="$(find-pkg-share nav2_bringup)/launch/bringup_launch.py">
+    <arg name="use_sim_time" value="$(var use_sim_time)"/>
     <arg name="map" value="$(var map)"/>
-    <arg name="use_sim_time" value="false"/>
-    <arg name="params_file" value="$(var params_file)"/>
+    <arg name="params_file" value="$(var nav2_params)"/>
+    <arg name="autostart" value="$(var autostart)"/>
+    <arg name="use_composition" value="$(var use_composition)"/>
   </include>
 
-  <node if="$(var rviz)"
-        pkg="rviz2"
-        exec="rviz2"
-        name="nav2_rviz"
-        output="screen"
-        args="-d $(var rviz_config_path)">
-    <param name="use_sim_time" value="false"/>
+  <let name="rviz_config"
+       value="$(find-pkg-share puzzlebot_navigation)/rviz/nav2.rviz"/>
+
+  <node pkg="rviz2" exec="rviz2" name="rviz2" output="screen"
+        args="-d $(var rviz_config)">
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
   </node>
 </launch>

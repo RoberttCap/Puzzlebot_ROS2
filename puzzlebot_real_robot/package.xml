@@ -17,8 +17,6 @@
   <exec_depend>rviz2</exec_depend>
   <exec_depend>slam_toolbox</exec_depend>
   <exec_depend>nav2_bringup</exec_depend>
-  <exec_depend>puzzlebot_ros</exec_depend>
-  <exec_depend>rplidar_ros</exec_depend>
   <exec_depend>rclpy</exec_depend>
   <exec_depend>teleop_twist_keyboard</exec_depend>
   <exec_depend>micro_ros_agent</exec_depend>

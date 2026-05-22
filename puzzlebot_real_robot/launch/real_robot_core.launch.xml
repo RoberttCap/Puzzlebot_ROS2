@@ -2,8 +2,10 @@
   <!--
     Core bringup for the physical Puzzlebot.
 
-    This launch intentionally does not include Gazebo, ros_gz_bridge,
-    /clock, simulation plugins, or simulated odometry.
+    This launch is intended to run on the Jetson, where the real hardware
+    packages are installed:
+      - micro_ros_agent
+      - rplidar_ros
 
     Debug strategy:
       1. First run with localization and joint_state_publisher disabled.
@@ -14,8 +16,8 @@
 
   <!-- Hardware driver switches -->
   <arg name="use_micro_ros" default="true"/>
-  <arg name="micro_ros_device" default="/dev/ttyUSB0"/>
-  <arg name="micro_ros_baudrate" default="115200"/>
+  <arg name="use_rplidar" default="true"/>
+  <arg name="use_sim_time" default="false"/>
 
   <arg name="use_rplidar" default="true"/>
   <arg name="rplidar_serial_port" default="/dev/ttyUSB1"/>
@@ -23,30 +25,33 @@
   <arg name="scan_topic" default="scan"/>
   <arg name="lidar_frame" default="laser_frame"/>
 
+  <!-- micro-ROS Agent configuration -->
+  <arg name="micro_ros_transport" default="serial"/>
+  <arg name="micro_ros_device" default="/dev/ttyUSB0"/>
+  <arg name="micro_ros_baudrate" default="115200"/>
+
   <!-- Robot description -->
   <arg name="use_robot_state_publisher" default="true"/>
   <arg name="urdf_path" default="$(find-pkg-share puzzlebot_description)/urdf/puzzlebot.xacro"/>
 
-  <!-- Real odometry and wheel state reconstruction.
-       Keep disabled until the raw firmware encoder topics are confirmed. -->
-  <arg name="use_localization" default="false"/>
-  <arg name="use_joint_state_publisher" default="false"/>
-
-  <!-- Encoder topic names. Change after confirming real micro-ROS topic names. -->
-  <arg name="right_wheel_topic" default="wr"/>
-  <arg name="left_wheel_topic" default="wl"/>
+  <!-- Real encoder topics from the robot firmware / micro-ROS -->
+  <arg name="right_wheel_topic" default="/VelocityEncR"/>
+  <arg name="left_wheel_topic" default="/VelocityEncL"/>
 
   <!-- Physical robot parameters -->
   <arg name="wheel_radius" default="0.05"/>
   <arg name="wheel_base" default="0.19"/>
+  <arg name="right_wheel_scale" default="1.0"/>
+  <arg name="left_wheel_scale" default="1.0"/>
+  <arg name="publish_odom_tf" default="true"/>
 
-  <!-- Direct micro-ROS agent, like the older working version. -->
+  <!-- micro-ROS agent. On the physical robot, this should run on the Jetson. -->
   <node if="$(var use_micro_ros)"
         pkg="micro_ros_agent"
         exec="micro_ros_agent"
         name="micro_ros_agent"
         output="screen"
-        args="serial --dev $(var micro_ros_device) -b $(var micro_ros_baudrate)"/>
+        args="$(var micro_ros_transport) --dev $(var micro_ros_device) -b $(var micro_ros_baudrate)"/>
 
   <!-- Real RPLiDAR driver. -->
   <node if="$(var use_rplidar)"
@@ -66,7 +71,7 @@
         exec="robot_state_publisher"
         name="robot_state_publisher"
         output="screen">
-    <param name="use_sim_time" value="false"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
     <param name="robot_description" value="$(command 'xacro $(var urdf_path)')"/>
   </node>
 
@@ -78,15 +83,17 @@
         exec="puzzlebot_localization.py"
         name="puzzlebot_localization"
         output="screen">
-    <param name="use_sim_time" value="false"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
     <param name="right_wheel_topic" value="$(var right_wheel_topic)"/>
     <param name="left_wheel_topic" value="$(var left_wheel_topic)"/>
     <param name="wheel_radius" value="$(var wheel_radius)"/>
     <param name="wheel_base" value="$(var wheel_base)"/>
+    <param name="right_wheel_scale" value="$(var right_wheel_scale)"/>
+    <param name="left_wheel_scale" value="$(var left_wheel_scale)"/>
     <param name="odom_topic" value="odom"/>
     <param name="odom_frame" value="odom"/>
     <param name="base_frame" value="base_footprint"/>
-    <param name="publish_tf" value="true"/>
+    <param name="publish_tf" value="$(var publish_odom_tf)"/>
   </node>
 
   <!-- Wheel joint state publisher.
@@ -96,7 +103,7 @@
         exec="puzzlebot_joint_state_publisher.py"
         name="puzzlebot_joint_state_publisher"
         output="screen">
-    <param name="use_sim_time" value="false"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
     <param name="right_wheel_topic" value="$(var right_wheel_topic)"/>
     <param name="left_wheel_topic" value="$(var left_wheel_topic)"/>
     <param name="right_wheel_joint" value="wheel_r_joint"/>

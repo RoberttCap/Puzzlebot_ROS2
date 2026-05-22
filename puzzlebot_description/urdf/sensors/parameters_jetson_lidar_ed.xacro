@@ -193,9 +193,9 @@
 
 
     <!--Meshes -->
-        <xacro:property name="mesh_puzzlebot_chassis"  value="file://$(find puzzlebot_description)/meshes/Robot_lidar_base/Puzzlebot_Jetson_Lidar_Edition_Base.stl" />
-        <xacro:property name="mesh_puzzlebot_wheel"  value="file://$(find puzzlebot_description)/meshes/Wheels/Puzzlebot_Wheel.stl" />
-        <xacro:property name="mesh_puzzlebot_caster"  value="file://$(find puzzlebot_description)/meshes/Components/Puzzlebot_Caster_Wheel.stl" />
-        <xacro:property name="mesh_puzzlebot_lidar"  value="file://$(find puzzlebot_description)/meshes/Sensor/RPLidar.stl" />
+        <xacro:property name="mesh_puzzlebot_chassis"  value="package://puzzlebot_description/meshes/Robot_lidar_base/Puzzlebot_Jetson_Lidar_Edition_Base.stl" />
+        <xacro:property name="mesh_puzzlebot_wheel"  value="package://puzzlebot_description/meshes/Wheels/Puzzlebot_Wheel.stl" />
+        <xacro:property name="mesh_puzzlebot_caster"  value="package://puzzlebot_description/meshes/Components/Puzzlebot_Caster_Wheel.stl" />
+        <xacro:property name="mesh_puzzlebot_lidar"  value="package://puzzlebot_description/meshes/Sensor/RPLidar.stl" />
 
 </robot>
