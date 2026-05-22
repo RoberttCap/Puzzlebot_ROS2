@@ -466,4 +466,3 @@ Los ajustes realizados mejoraron la estabilidad de la localización, la suavidad
 Este proyecto incluye un archivo `LICENSE` en la raíz del repositorio.
 
 ### README.md
-
