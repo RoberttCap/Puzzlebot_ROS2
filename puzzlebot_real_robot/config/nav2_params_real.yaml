@@ -10,6 +10,7 @@ amcl:
     odom_frame_id: odom
     global_frame_id: map
     scan_topic: /scan
+    map_topic: map
     laser_model_type: likelihood_field
     max_beams: 60
     min_particles: 200
@@ -175,7 +176,7 @@ global_costmap:
           obstacle_min_range: 0.0
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 0.12 # original 0.16
+        inflation_radius: 0.08 # original 0.16
         cost_scaling_factor: 3.0 
       always_send_full_costmap: true
 
@@ -220,9 +221,10 @@ behavior_server:
       plugin: "nav2_behaviors/DriveOnHeading"
     wait:
       plugin: "nav2_behaviors/Wait"
-    global_frame: odom
+    local_frame: odom
+    global_frame: map
     robot_base_frame: base_footprint
-    transform_tolerance: 0.2
+    transform_timeout: 0.1
     simulate_ahead_time: 2.0
     max_rotational_vel: 0.45
     min_rotational_vel: 0.10
