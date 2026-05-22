@@ -1,38 +1,45 @@
 <launch>
-  <arg name="params_file" default="$(find-pkg-share puzzlebot_real_robot)/config/slam_toolbox_real.yaml"/>
+  <arg name="slam_params_file" default="$(find-pkg-share puzzlebot_real_robot)/config/slam_toolbox_real.yaml"/>
   <arg name="rviz" default="true"/>
   <arg name="rviz_config_path" default="$(find-pkg-share puzzlebot_navigation)/rviz/slam.rviz"/>
   <arg name="teleop" default="true"/>
+  <arg name="bringup_core" default="true"/>
+  <arg name="use_sim_time" default="false"/>
   <arg name="use_micro_ros" default="false"/>
   <arg name="use_rplidar" default="false"/>
-  <arg name="right_wheel_topic" default="wr"/>
-  <arg name="left_wheel_topic" default="wl"/>
-  <arg name="scan_topic" default="scan"/>
+  <arg name="right_wheel_topic" default="/VelocityEncR"/>
+  <arg name="left_wheel_topic" default="/VelocityEncL"/>
+  <arg name="rplidar_serial_port" default="/dev/ttyUSB1"/>
+  <arg name="rplidar_serial_baudrate" default="115200"/>
   <arg name="lidar_frame" default="laser_frame"/>
-  <arg name="publish_lidar_correction_tf" default="false"/>
-  <arg name="lidar_corrected_frame" default="laser_frame_real"/>
+  <arg name="micro_ros_transport" default="serial"/>
+  <arg name="micro_ros_device" default="/dev/ttyACM0"/>
+  <arg name="micro_ros_baudrate" default="115200"/>
 
-  <include file="$(find-pkg-share puzzlebot_real_robot)/launch/real_robot_core.launch.xml">
+  <!-- Hardware base del Puzzlebot fisico -->
+  <include if="$(var bringup_core)" file="$(find-pkg-share puzzlebot_real_robot)/launch/real_robot_core.launch.xml">
+    <arg name="use_sim_time" value="$(var use_sim_time)"/>
     <arg name="use_micro_ros" value="$(var use_micro_ros)"/>
     <arg name="use_rplidar" value="$(var use_rplidar)"/>
     <arg name="right_wheel_topic" value="$(var right_wheel_topic)"/>
     <arg name="left_wheel_topic" value="$(var left_wheel_topic)"/>
-    <arg name="scan_topic" value="$(var scan_topic)"/>
+    <arg name="rplidar_serial_port" value="$(var rplidar_serial_port)"/>
+    <arg name="rplidar_serial_baudrate" value="$(var rplidar_serial_baudrate)"/>
     <arg name="lidar_frame" value="$(var lidar_frame)"/>
-    <arg name="publish_lidar_correction_tf" value="$(var publish_lidar_correction_tf)"/>
-    <arg name="lidar_corrected_frame" value="$(var lidar_corrected_frame)"/>
+    <arg name="micro_ros_transport" value="$(var micro_ros_transport)"/>
+    <arg name="micro_ros_device" value="$(var micro_ros_device)"/>
+    <arg name="micro_ros_baudrate" value="$(var micro_ros_baudrate)"/>
   </include>
 
-  <node pkg="slam_toolbox"
-        exec="async_slam_toolbox_node"
-        name="slam_toolbox"
-        output="screen">
-    <param name="use_sim_time" value="false"/>
-    <param from="$(var params_file)"/>
+  <!-- SLAM Toolbox online async con params del robot real -->
+  <node pkg="slam_toolbox" exec="async_slam_toolbox_node" name="slam_toolbox" output="screen">
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+    <param from="$(var slam_params_file)"/>
   </node>
 
-  <node if="$(var rviz)" pkg="rviz2" exec="rviz2" name="slam_rviz" output="screen" args="-d $(var rviz_config_path)">
-    <param name="use_sim_time" value="false"/>
+  <!-- RViz reutilizando el perfil de SLAM de puzzlebot_navigation -->
+  <node if="$(var rviz)" pkg="rviz2" exec="rviz2" name="rviz2" output="screen" args="-d $(var rviz_config_path)">
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
   </node>
 
   <node if="$(var teleop)" pkg="teleop_twist_keyboard" exec="teleop_twist_keyboard" name="teleop_keyboard" output="screen" launch-prefix="xterm -e"/>

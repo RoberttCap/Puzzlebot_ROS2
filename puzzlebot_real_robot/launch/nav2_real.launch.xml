@@ -5,8 +5,8 @@
   <arg name="rviz_config_path" default="$(find-pkg-share puzzlebot_navigation)/rviz/nav2.rviz"/>
   <arg name="use_micro_ros" default="false"/>
   <arg name="use_rplidar" default="false"/>
-  <arg name="right_wheel_topic" default="wr"/>
-  <arg name="left_wheel_topic" default="wl"/>
+  <arg name="right_wheel_topic" default="/VelocityEncR"/>
+  <arg name="left_wheel_topic" default="/VelocityEncL"/>
   <arg name="scan_topic" default="scan"/>
   <arg name="lidar_frame" default="laser_frame"/>
   <arg name="publish_lidar_correction_tf" default="false"/>
