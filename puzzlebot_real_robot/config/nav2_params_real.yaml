@@ -24,7 +24,7 @@ amcl:
 map_server:
   ros__parameters:
     use_sim_time: false
-    yaml_filename: "map_maze_real.yaml"
+    yaml_filename: "/home/aldemarg/puzzlebot_ws/src/puzzlebot_real_robot/maps/map_maze_real.yaml"
 
 map_saver:
   ros__parameters:
@@ -37,11 +37,11 @@ map_saver:
 planner_server:
   ros__parameters:
     use_sim_time: false
-    expected_planner_frequency: 10.0
+    expected_planner_frequency: 15.0
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "nav2_navfn_planner/NavfnPlanner"
-      tolerance: 0.20
+      tolerance: 0.50
       use_astar: true
       allow_unknown: false
 
@@ -50,7 +50,7 @@ controller_server:
     use_sim_time: false
     controller_frequency: 15.0
     min_x_velocity_threshold: 0.001
-    min_y_velocity_threshold: 0.5
+    min_y_velocity_threshold: 0.001
     min_theta_velocity_threshold: 0.001
     progress_checker_plugin: "progress_checker"
     goal_checker_plugins: ["general_goal_checker"]
@@ -58,8 +58,8 @@ controller_server:
 
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.08
-      movement_time_allowance: 10.0
+      required_movement_radius: 0.
+      movement_time_allowance: 15.0
 
     general_goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
@@ -72,11 +72,11 @@ controller_server:
       debug_trajectory_details: false
       min_vel_x: 0.0
       min_vel_y: 0.0
-      max_vel_x: 0.14
+      max_vel_x: 0.10
       max_vel_y: 0.0
       max_vel_theta: 0.45
       min_speed_xy: 0.0
-      max_speed_xy: 0.14
+      max_speed_xy: 0.10
       min_speed_theta: 0.0
       acc_lim_x: 0.20
       acc_lim_y: 0.0
@@ -97,11 +97,11 @@ controller_server:
       stateful: true
       critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
       BaseObstacle.scale: 0.02
-      PathAlign.scale: 32.0
+      PathAlign.scale: 20.0
       PathAlign.forward_point_distance: 0.10
-      GoalAlign.scale: 24.0
+      GoalAlign.scale: 15.0
       GoalAlign.forward_point_distance: 0.10
-      PathDist.scale: 32.0
+      PathDist.scale: 20.0
       GoalDist.scale: 24.0
       RotateToGoal.scale: 32.0
       RotateToGoal.slowing_factor: 5.0
@@ -114,13 +114,17 @@ local_costmap:
       global_frame: odom
       robot_base_frame: base_footprint
       rolling_window: true
-      width: 2
-      height: 2
+      width: 3
+      height: 3
       resolution: 0.05
-      robot_radius: 0.12
+      #robot_radius: 0.12
       update_frequency: 5.0
       publish_frequency: 2.0
       transform_tolerance: 0.3
+
+      footprint: "[[0.10, 0.0905], [0.10, -0.0905], [-0.10, -0.0905], [-0.10, 0.0905]]"
+      footprint_padding: 0.03    # ligeramente mayor en real por imprecision
+
       plugins: ["obstacle_layer", "inflation_layer"]
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
@@ -138,8 +142,8 @@ local_costmap:
           obstacle_min_range: 0.0
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 0.16
-        cost_scaling_factor: 3.0
+        inflation_radius: 0.08
+        cost_scaling_factor: 1.0
       always_send_full_costmap: true
 
 
@@ -150,7 +154,7 @@ global_costmap:
       global_frame: map
       robot_base_frame: base_footprint
       resolution: 0.05
-      robot_radius: 0.10
+      robot_radius: 0.12
       update_frequency: 1.0
       publish_frequency: 1.0
       transform_tolerance: 0.3
@@ -175,8 +179,8 @@ global_costmap:
           obstacle_min_range: 0.0
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 0.10
-        cost_scaling_factor: 1.5
+        inflation_radius: 0.12
+        cost_scaling_factor: 1.0
       always_send_full_costmap: true
 
 bt_navigator:
@@ -193,15 +197,6 @@ bt_navigator:
     navigate_through_poses:
       plugin: "nav2_bt_navigator::NavigateThroughPosesNavigator"
 
-smoother_server:
-  ros__parameters:
-    use_sim_time: false
-    smoother_plugins: ["simple_smoother"]
-    simple_smoother:
-      plugin: "nav2_smoother::SimpleSmoother"
-      tolerance: 1.0e-10
-      max_its: 1000
-      do_refinement: true
 
 behavior_server:
   ros__parameters:
@@ -238,4 +233,5 @@ waypoint_follower:
       plugin: "nav2_waypoint_follower::WaitAtWaypoint"
       enabled: true
       waypoint_pause_duration: 200
+
 
