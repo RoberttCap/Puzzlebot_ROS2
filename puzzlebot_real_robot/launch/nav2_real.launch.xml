@@ -1,9 +1,22 @@
 <?xml version="1.0"?>
+<!--
+  Navigation bringup for the physical Puzzlebot.
+
+  This launch is intended to run on the robot computer, where micro-ROS and
+  rplidar_ros are available. For running Nav2 from a remote PC while the Jetson
+  runs the hardware core, use nav2_remote.launch.xml.
+-->
 <launch>
   <arg name="use_sim_time" default="false"/>
-  <arg name="map" default="$(find-pkg-share puzzlebot_real_robot)/maps/map_maze_real.yaml"/>
+  <arg name="map"
+       default="$(find-pkg-share puzzlebot_real_robot)/maps/map_maze_real.yaml"
+       description="Absolute path to the real map yaml"/>
   <arg name="autostart" default="true"/>
   <arg name="use_composition" default="False"/>
+
+  <include file="$(find-pkg-share puzzlebot_real_robot)/launch/real_robot_core.launch.xml">
+    <arg name="use_sim_time" value="$(var use_sim_time)"/>
+  </include>
 
   <let name="nav2_params"
        value="$(find-pkg-share puzzlebot_real_robot)/config/nav2_params_real.yaml"/>

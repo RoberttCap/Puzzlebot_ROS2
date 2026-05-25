@@ -3,14 +3,11 @@
 <package format="3">
   <name>puzzlebot_navigation</name>
   <version>0.0.0</version>
-  <description>Navigation stack for Puzzlebot - Simulation robot Gazebo</description>
+  <description>Navigation package for PuzzleBot</description>
   <maintainer email="pullos3002@gmail.com">aldemarg</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
-
-  <exec_depend>robot_state_publisher</exec_depend>
-  <exec_depend>rviz2</exec_depend>
 
   <!-- Navigation and SLAM dependencies -->
   <exec_depend>nav2_bringup</exec_depend>
