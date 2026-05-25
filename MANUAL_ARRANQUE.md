@@ -196,10 +196,16 @@ ros2 action send_goal /navigate_to_pose \
   nav2_msgs/action/NavigateToPose \
   "{pose: {header: {frame_id: 'map'}, pose: {position: {x: 1.0, y: 0.5}}}}"
 ```
-Para ayudarte a matar el nodo y que no se siga moviendo:
-ros2 topic pub /cmd_vel geometry_msgs/Twist "{linear: {x: 0.0}, angular: {z: 0.0}}" 
 
 ---
+
+Para ayudarte a matar el nodo y que no se siga moviendo:
+```bash
+ros2 topic pub /cmd_vel geometry_msgs/Twist "{linear: {x: 0.0}, angular: {z: 0.0}}" 
+```
+
+---
+
 
 ## Diagnóstico rápido de errores
 
