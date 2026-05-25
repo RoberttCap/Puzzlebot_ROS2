@@ -10,13 +10,13 @@ Conectar **laptop y Puzzlebot a la misma red** (hotspot del celular o WiFi del r
 Confirmar que la Jetson responde:
 ```bash
 # En la laptop
-ping -c 3 <IP_JETSON>
+ping -c 3 <10.41.235.217>
 ```
 
 Conectarse por SSH:
 ```bash
-ssh puzzlebot@<IP_JETSON>
-# Contraseña: Contraseña que tengas en tu robot
+ssh puzzlebot@<10.41.235.217>
+# Contraseña: Contra del robot
 ```
 
 ---
