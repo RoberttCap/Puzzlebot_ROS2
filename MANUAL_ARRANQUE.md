@@ -16,7 +16,7 @@ ping -c 3 <IP_JETSON>
 Conectarse por SSH:
 ```bash
 ssh puzzlebot@<IP_JETSON>
-# Contraseña: Puzzlebot72
+# Contraseña: Contraseña que tengas en tu robot
 ```
 
 ---
@@ -90,7 +90,7 @@ Abrir **dos terminales SSH** (ambas con las variables del Paso 2).
 
 **Terminal SSH 1 — micro-ROS (Hackerboard):**
 ```bash
-ros2 launch puzzlebot_ros micro_ros_agent.launch.py serial_port:=/dev/ttyUSB0
+ros2 launch puzzlebot_ros micro_ros_agent.launch.py
 ```
 
 **Terminal SSH 2 — LiDAR:**
@@ -210,7 +210,7 @@ ros2 action send_goal /navigate_to_pose \
 | `Invalid frame ID "laser"` | frame_id del LiDAR incorrecto | Lanzar rplidar con `frame_id:=laser_frame` |
 | Timestamps inválidos en TF | Relojes desincronizados | Repetir Paso 1 |
 | Robot se desvía mucho | Drift de odometría | Ajustar `kr` y `kl` en `puzzlebot_localization.py` |
-| Mapa no carga | Ruta del yaml incorrecta | Verificar `yaml_filename` en `nav2_params_real.yaml` |
+| Mapa no carga | Ruta del yaml incorrecta | Verificar `yaml_filename` en `nav2_params_real.yaml` | yaml_filename: "/home/aldemarg/puzzlebot_ws/src/puzzlebot_real_robot/maps/map_maze_real.yaml"
 
 ---
 
