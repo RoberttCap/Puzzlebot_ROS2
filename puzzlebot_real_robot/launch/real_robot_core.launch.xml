@@ -19,7 +19,6 @@
   <arg name="use_rplidar" default="true"/>
   <arg name="use_sim_time" default="false"/>
 
-  <arg name="use_rplidar" default="true"/>
   <arg name="rplidar_serial_port" default="/dev/ttyUSB1"/>
   <arg name="rplidar_serial_baudrate" default="115200"/>
   <arg name="scan_topic" default="scan"/>
@@ -67,15 +66,12 @@
     <remap from="scan" to="$(var scan_topic)"/>
   </node>
 
-  <!-- Publishes robot_description and fixed/dynamic URDF transforms from /joint_states. -->
-  <node if="$(var use_robot_state_publisher)"
-        pkg="robot_state_publisher"
-        exec="robot_state_publisher"
-        name="robot_state_publisher"
-        output="screen">
-    <param name="use_sim_time" value="$(var use_sim_time)"/>
-    <param name="robot_description" value="$(command 'xacro $(var urdf_path)')"/>
-  </node>
+  <!-- Incluye el launch de robot_state_publisher desde puzzlebot_description -->
+  <include if="$(var use_robot_state_publisher)"
+           file="$(find-pkg-share puzzlebot_description)/launch/puzzlebot_description.launch.xml">
+    <arg name="use_sim_time" value="$(var use_sim_time)"/>
+    <arg name="urdf_path" value="$(var urdf_path)"/>
+  </include>
 
   <!-- Dead reckoning odometry.
        This should be the only source of /odom and odom -> base_footprint

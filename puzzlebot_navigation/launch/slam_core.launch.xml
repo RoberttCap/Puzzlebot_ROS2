@@ -2,17 +2,19 @@
     <arg name="slam_params_file" default="$(find-pkg-share puzzlebot_navigation)/config/slam_toolbox.yaml"/>
     <arg name="rviz_config_path" default="$(find-pkg-share puzzlebot_navigation)/rviz/slam.rviz" />
     <arg name="use_sim_time" default="true" />
+    <arg name="rviz" default="true" />
+    <arg name="teleop" default="true" />
 
     <node pkg="slam_toolbox" exec="async_slam_toolbox_node" name="slam_toolbox" output="screen">
         <param name="use_sim_time" value="$(var use_sim_time)" />
         <param from="$(var slam_params_file)" />
     </node>
 
-    <node pkg="rviz2" exec="rviz2" name="rviz2" output="screen" args="-d $(var rviz_config_path)">
+    <node if="$(var rviz)" pkg="rviz2" exec="rviz2" name="rviz2" output="screen" args="-d $(var rviz_config_path)">
         <param name="use_sim_time" value="$(var use_sim_time)" />
     </node>
 
-    <node pkg="teleop_twist_keyboard" exec="teleop_twist_keyboard" name="teleop_keyboard" output="screen" launch-prefix="xterm -e" />
+    <node if="$(var teleop)" pkg="teleop_twist_keyboard" exec="teleop_twist_keyboard" name="teleop_keyboard" output="screen" launch-prefix="xterm -e" />
 </launch>
 
 

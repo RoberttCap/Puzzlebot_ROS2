@@ -3,9 +3,9 @@
     <arg name="gazebo" default="false" />
     <arg name="joint_gui" default="false" />
     <arg name="use_sim_time" default="false" />
+    <arg name="urdf_path" default="$(find-pkg-share puzzlebot_description)/urdf/puzzlebot.xacro" />
+    <arg name="rviz_config_path" default="$(find-pkg-share puzzlebot_description)/rviz/puzzlebot_description.rviz" />
 
-    <let name="urdf_path" value="$(find-pkg-share puzzlebot_description)/urdf/puzzlebot.xacro" />
-    <let name="rviz_config_path" value="$(find-pkg-share puzzlebot_description)/rviz/puzzlebot_description.rviz" />
     <let name="gazebo_path" value="$(find-pkg-share ros_gz_sim)/launch/gz_sim.launch.py" /> 
     <!-- Este es para gazebo garden, instalar gazebo garden con
     las especificaciones de la primer actividad de juanma ledesma -->

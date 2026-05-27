@@ -1,0 +1,767 @@
+\documentclass[conference]{IEEEtran}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{cite}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{caption}
+
+% Estilo para bloques de código
+\lstdefinestyle{shellstyle}{
+  backgroundcolor=\color{gray!10},
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{gray!40},
+  xleftmargin=6pt,
+  xrightmargin=6pt,
+  framexleftmargin=6pt,
+}
+\lstset{style=shellstyle}
+
+\title{Manual de Migración a Robot Real:\\
+Puzzlebot -- Sistema de Navegación Autónoma con ROS~2~Humble}
+
+\author{
+\IEEEauthorblockN{Sofía Blanco Prigmore}
+\IEEEauthorblockA{\textit{Departamento de Ingeniería}\\
+\textit{Tec de Monterrey Querétaro}\\
+Querétaro, México\\
+A01704567@tec.mx}
+\and
+\IEEEauthorblockN{Josué Aldemar Garduño Gómez}
+\IEEEauthorblockA{\textit{Departamento de Ingeniería}\\
+\textit{Tec de Monterrey Querétaro}\\
+Querétaro, México\\
+A01733320@tec.mx}
+\and
+\IEEEauthorblockN{Karina Fernanda Maldonado Murillo}
+\IEEEauthorblockA{\textit{Departamento de Ingeniería}\\
+\textit{Tec de Monterrey Querétaro}\\
+Querétaro, México\\
+A01707516@tec.mx}
+\and
+\IEEEauthorblockN{Roberto Carlos Pedraza Miranda}
+\IEEEauthorblockA{\textit{Departamento de Ingeniería}\\
+\textit{Tec de Monterrey Querétaro}\\
+Querétaro, México\\
+A01277764@tec.mx}
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Este documento describe el proceso de migración del robot móvil diferencial
+Puzzlebot desde un entorno de simulación en Gazebo hasta hardware físico real,
+utilizando ROS~2~Humble. Se detallan los paquetes reutilizados, el nuevo
+paquete creado para el robot físico (\texttt{puzzlebot\_real\_robot}), los
+cambios realizados en URDF/Xacro, configuraciones de Nav2, manejo de LiDAR,
+odometría, transformaciones TF y sincronización de tiempo. Asimismo, se
+documentan los principales problemas encontrados durante la migración y sus
+soluciones correspondientes. El resultado final es un sistema funcional capaz
+de ejecutar SLAM y navegación autónoma sobre la plataforma física.
+\end{abstract}
+
+\begin{IEEEkeywords}
+ROS 2, Puzzlebot, migración, SLAM, Nav2, odometría, LiDAR, Jetson, micro-ROS.
+\end{IEEEkeywords}
+
+\section{Descripción General del Proyecto}
+
+El proyecto Puzzlebot consiste en un robot móvil diferencial desarrollado en
+ROS~2~Humble capaz de realizar tareas de SLAM (\textit{Simultaneous
+Localization and Mapping}), navegación autónoma, localización con AMCL y
+planeación de trayectorias con Nav2~\cite{macenski2022nav2}.
+
+Inicialmente el proyecto fue desarrollado completamente en simulación
+utilizando Gazebo~\cite{koenig2004gazebo}. Posteriormente, el sistema fue
+migrado a hardware real empleando una Jetson Nano y sensores físicos: un
+LiDAR RPLIDAR A1 y encoders de rueda conectados mediante micro-ROS.
+
+El objetivo principal de la migración fue mantener la arquitectura modular
+del proyecto mientras se sustituían los componentes simulados por hardware
+físico real, siguiendo buenas prácticas de separación entre simulación y
+hardware dentro del mismo workspace de ROS~2.
+
+
+\section{Marco Teórico}
+
+\subsection{Simulación vs. Hardware Real en ROS~2}
+
+Un error conceptual frecuente al migrar es asumir que basta con quitar Gazebo
+para obtener un sistema funcional en el robot físico. En realidad, Gazebo no
+es un componente aislado: es la fuente de múltiples servicios que el resto del
+stack consume automáticamente. Al eliminarlo desaparecen también los plugins de
+movimiento diferencial, el bridge Gazebo-ROS~2, el frame \texttt{world}, el
+tópico \texttt{/clock} y todos los datos de sensores y odometría
+simulados~\cite{koenig2004gazebo}. La migración correcta no consiste en
+suprimir Gazebo sino en \textit{reemplazar} cada uno de esos bloques por su
+equivalente de hardware real.
+
+\subsection{Arquitectura Distribuida}
+
+Mientras que en simulación todo el stack reside en una sola máquina, en el
+robot físico el sistema es distribuido. Para este caso se optó por ejecutar
+RViz y Nav2 opcionalmente por SSH; el robot, mediante la Jetson Nano, publica
+LiDAR, odometría y TF; y Nav2 consume datos de ambos dispositivos
+simultáneamente. Esta distribución exige que cada dato tenga una
+\textit{única fuente de verdad}: si dos nodos publican \texttt{/odom} o la
+misma transformación TF, el árbol de frames se vuelve inconsistente y Nav2
+presenta comportamiento errático~\cite{macenski2022nav2}.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.32\textwidth]{arq.png}
+\caption{Arquitectura distribuida del sistema. La laptop ejecuta RViz y Nav2, mientras que la Jetson Nano publica LiDAR, odometría y transformaciones TF mediante ROS~2 Humble y micro-ROS. Diagrama elaborado con apoyo de ChatGPT.}
+\label{fig:arquitectura}
+\end{figure}
+
+\subsection{Odometría por Dead Reckoning}
+
+En hardware real, la odometría no existe automáticamente. Debe calcularse
+mediante un nodo de \textit{dead reckoning} que integra las velocidades de los
+encoders de rueda ($\omega_r$, $\omega_l$) aplicando cinemática directa diferencial:
+
+\begin{equation}
+  v = \frac{r(\omega_r + \omega_l)}{2}, \quad
+  \omega = \frac{r(\omega_r - \omega_l)}{L}
+\end{equation}
+
+donde $r$ es el radio de rueda y $L$ la separación entre ruedas. La pose se
+obtiene integrando en el tiempo:
+
+\begin{equation}
+  \begin{pmatrix} x_{k+1} \\ y_{k+1} \\ \theta_{k+1} \end{pmatrix}
+  =
+  \begin{pmatrix} x_k + v\Delta t \cos\theta_k \\
+                  y_k + v\Delta t \sin\theta_k \\
+                  \theta_k + \omega\Delta t \end{pmatrix}
+\end{equation}
+
+La estimación acumula error con el tiempo (\textit{drift}), razón por la cual
+se combina con AMCL para corrección global~\cite{dellaert1999amcl}. La
+odometría afecta directamente a AMCL, al planner local, al controlador y a la
+estabilidad visual en RViz; si es incorrecta, todo el stack parece fallar.
+
+\subsection{Árbol de Transformaciones TF}
+
+Nav2 requiere una cadena TF continua y sin duplicados:
+$\texttt{map} \to \texttt{odom} \to \texttt{base\_footprint}$.
+En simulación, Gazebo la publica de forma automática. En hardware real, cada
+enlace debe ser provisto por un nodo específico: \texttt{robot\_state\_publisher}
+genera los TFs estáticos a partir del URDF, mientras que el nodo de
+localización publica la transformación dinámica
+$\texttt{odom} \to \texttt{base\_footprint}$~\cite{macenski2022nav2}.
+El frame \texttt{world} propio de Gazebo no forma parte de la cadena de
+navegación y no debe incluirse en el stack físico.
+
+\subsection{Sincronización de Tiempo en Sistemas Distribuidos}
+
+En ROS~2, todos los mensajes llevan \textit{timestamps}. TF descarta
+transformaciones cuyo sello temporal no coincide con el del consumidor, y
+Nav2 rechaza datos que parezcan ser del futuro o excesivamente viejos. Cuando
+la laptop y la Jetson Nano tienen relojes desincronizados, los síntomas
+observables son: LiDAR desalineado en RViz, transformaciones no encontradas y
+Nav2 congelado o errático.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.48\textwidth]{2dposeestimate.png}
+\caption{Error de transformaciones TF causado por desincronización temporal entre la laptop y la Jetson Nano antes de configurar NTP.}
+\label{fig:tf_error}
+\end{figure}
+
+La solución estándar es configurar un servidor NTP local en la laptop usando
+\texttt{chrony} y apuntar la Jetson a él mediante
+\texttt{systemd-timesyncd}~\cite{chronydoc}. En hardware real el parámetro
+\texttt{use\_sim\_time} debe ser siempre \texttt{false}; si se deja en
+\texttt{true}, los nodos esperan un tópico \texttt{/clock} que no existe y el
+sistema queda congelado.
+
+\subsection{Mínimo Viable para Nav2 en Hardware Real}
+
+El stack de navegación requiere exactamente cuatro condiciones previas antes
+de poder operar~\cite{macenski2022nav2}:
+
+\begin{enumerate}
+  \item LiDAR publicando \texttt{/scan} con el \texttt{frame\_id} correcto y
+        orientación validada.
+  \item Odometría real publicando \texttt{/odom} y la transformación
+        $\texttt{odom} \to \texttt{base\_footprint}$ desde una única fuente.
+  \item Mapa cargado y AMCL activo para localización global.
+  \item Controlador, planners y RViz para generación de trayectorias y
+        visualización.
+\end{enumerate}
+
+Cualquier componente que no contribuya a estos cuatro puntos genera tópicos y
+TF duplicados, consume CPU innecesariamente y confunde el diagnóstico.
+
+\subsection{Parámetros Físicos Críticos}
+
+La separación entre ruedas (\texttt{wheel\_separation}) y el radio
+(\texttt{wheel\_radius}) afectan directamente la cinemática y los giros del
+robot. En simulación estos valores se configuran en el plugin
+\texttt{gz::sim::systems::DiffDrive}; en el robot físico se ajustan en la
+interfaz de la Hackerboard.
+
+\section{Estructura Inicial del Proyecto}
+
+La estructura original del proyecto estaba dividida en tres paquetes principales:
+
+\begin{lstlisting}
+puzzlebot_ws/
+  puzzlebot_description/
+  puzzlebot_gazebo/
+  puzzlebot_navigation/
+\end{lstlisting}
+
+\subsection{puzzlebot\_description}
+Contenía el modelo URDF/Xacro del robot, mallas STL, definición de frames TF
+y configuración de sensores.
+
+\subsection{puzzlebot\_gazebo}
+Alojaba los launch files de simulación, la configuración de Gazebo, el mundo
+del laberinto y los bridges ROS-Gazebo.
+
+\subsection{puzzlebot\_navigation}
+Contenía los launch files de SLAM y Nav2, la configuración de AMCL, los
+parámetros de navegación y los mapas generados.
+
+\section{Paquetes Reutilizados}
+
+Durante la migración se reutilizaron componentes del proyecto original sin
+modificaciones estructurales significativas.
+
+\textbf{puzzlebot\_description} fue reutilizado en su totalidad: modelo
+URDF/Xacro, frames TF, geometría del robot, configuración del LiDAR y mallas STL.
+
+\textbf{puzzlebot\_navigation} fue reutilizado en cuanto a SLAM Toolbox, Nav2,
+RViz, mapas y estructura de navegación. Se realizaron ajustes únicamente en
+parámetros específicos para adaptarlos al hardware real.
+
+\section{Nuevo Paquete para Robot Físico}
+
+Se creó el paquete \texttt{puzzlebot\_real\_robot}, que centraliza todo lo
+relacionado con el hardware físico. Su estructura es la siguiente:
+
+\begin{lstlisting}
+puzzlebot_real_robot/
+  launch/
+  config/
+  scripts/
+  maps/
+\end{lstlisting}
+
+\subsection{Launch Files Creados}
+
+\textbf{real\_robot\_core.launch.xml} — Bringup básico del robot real:
+LiDAR, micro-ROS, TF, odometría y \texttt{robot\_state\_publisher}.
+
+\textbf{slam\_real.launch.xml} — Ejecuta el bringup del robot, SLAM Toolbox
+y RViz.
+
+\textbf{nav2\_real.launch.xml} — Ejecuta el bringup, Nav2, AMCL y navegación
+autónoma.
+
+\subsection{Scripts Creados}
+
+\textbf{puzzlebot\_localization.py} — Nodo personalizado que integra
+velocidades de ruedas, calcula odometría, publica \texttt{/odom} y la
+transformación \texttt{odom~$\rightarrow$~base\_footprint}.
+
+\textbf{puzzlebot\_joint\_state\_publisher.py} — Publica
+\texttt{/joint\_states} para visualización correcta en RViz.
+
+\section{Arquitectura de Launch Files}
+
+\subsection{Simulación}
+\begin{lstlisting}
+slam.launch.xml
+  slam_toolbox
+  puzzlebot_gazebo.launch.xml
+    Gazebo -> /odom, /scan, /tf
+\end{lstlisting}
+
+En simulación, Gazebo generaba automáticamente los tópicos \texttt{/odom},
+\texttt{/scan} y \texttt{/tf}.
+
+\subsection{Hardware Real}
+\begin{lstlisting}
+slam_real.launch.xml
+  slam_toolbox
+  real_robot_core.launch.xml
+    rplidar_ros              -> /scan
+    puzzlebot_localization.py -> /odom, /tf
+    robot_state_publisher    -> /tf estatico
+\end{lstlisting}
+
+En hardware real, cada componente es lanzado explícitamente. El nodo de
+localización personalizado sustituye la odometría perfecta de Gazebo.
+
+\section{Cambios en URDF/Xacro}
+
+El URDF se mantuvo prácticamente igual entre simulación y hardware real.
+
+\subsection{Plugins de Gazebo}
+Los plugins de simulación, como \texttt{libgazebo\_ros\_diff\_drive.so}, se
+conservaron en el archivo pero son ignorados automáticamente al ejecutar en
+hardware real.
+
+\subsection{Frames TF}
+Se conservó la misma jerarquía de frames:
+\[
+\texttt{map} \to \texttt{odom} \to \texttt{base\_footprint} \to
+\]
+\[
+\to \texttt{base\_link} \to 
+\texttt{laser\_frame}
+\texttt{laser\_frame}
+\]
+
+\subsection{Corrección de Orientación del LiDAR}
+Se agregó un \texttt{static\_transform\_publisher} para corregir la
+orientación del LiDAR cuando el sensor estaba montado con una rotación de
+180° respecto al frame esperado.
+
+\section{Cambios en Bringup}
+
+En simulación, Gazebo publicaba automáticamente odometría, joint states y TF.
+En hardware real fue necesario crear nodos adicionales:
+
+\begin{itemize}
+  \item \textbf{robot\_state\_publisher}: publica las TFs estáticas a partir
+  del URDF.
+  \item \textbf{puzzlebot\_localization.py}: calcula odometría mediante
+  integración de velocidades de ruedas $\omega_r$ y $\omega_l$ provenientes
+  de micro-ROS.
+  \item \textbf{micro\_ros\_agent}: conecta la Jetson con la tarjeta
+  controladora del robot.
+  \item \textbf{rplidar\_ros}: publica los scans reales del LiDAR.
+\end{itemize}
+
+\subsection{Configuración del Entorno ROS~2 en la Laptop}
+
+Antes de lanzar cualquier nodo desde la laptop, es necesario configurar el
+entorno ROS~2 para garantizar la comunicación con la Jetson Nano a través de
+la red WiFi compartida:
+
+\begin{lstlisting}
+cd ~/puzzlebot_ws
+unset RMW_IMPLEMENTATION
+export ROS_DOMAIN_ID=0
+export ROS_LOCALHOST_ONLY=0
+source install/setup.bash
+\end{lstlisting}
+
+Cada línea cumple una función específica en la arquitectura distribuida:
+
+\begin{itemize}
+  \item \textbf{unset RMW\_IMPLEMENTATION}: elimina cualquier middleware DDS
+  forzado, asegurando que laptop y Jetson usen la misma implementación.
+  \item \textbf{ROS\_DOMAIN\_ID=0}: define el canal lógico de comunicación.
+  \item \textbf{ROS\_LOCALHOST\_ONLY=0}: permite que los tópicos sean visibles
+  fuera de \texttt{127.0.0.1}.
+  \item \textbf{source install/setup.bash}: carga los paquetes compilados del
+  workspace.
+\end{itemize}
+
+Se recomienda agregar estas líneas al archivo \texttt{\textasciitilde/.bashrc}:
+
+\begin{lstlisting}
+echo "export ROS_DOMAIN_ID=0" >> ~/.bashrc
+echo "export ROS_LOCALHOST_ONLY=0" >> ~/.bashrc
+echo "unset RMW_IMPLEMENTATION" >> ~/.bashrc
+echo "source ~/puzzlebot_ws/install/setup.bash" >> ~/.bashrc
+source ~/.bashrc
+\end{lstlisting}
+
+\section{Cambios en Nav2}
+
+\subsection{Parámetro use\_sim\_time}
+El cambio más crítico fue deshabilitar el tiempo de simulación:
+
+\begin{lstlisting}
+# Simulacion
+use_sim_time: true
+
+# Hardware real
+use_sim_time: false
+\end{lstlisting}
+
+Este parámetro incorrecto era la causa principal de que AMCL no funcionara al
+iniciar en hardware real.
+
+\subsection{Velocidades}
+Se redujeron las velocidades para operar de forma segura en el entorno físico:
+
+\begin{lstlisting}
+# Simulacion
+desired_linear_vel: 0.25
+
+# Hardware real
+desired_linear_vel: 0.12
+\end{lstlisting}
+
+\subsection{Inflación del Costmap}
+Se redujo el radio de inflación del costmap para permitir la navegación en
+espacios estrechos del laberinto físico.
+
+\subsection{Parámetros de AMCL}
+Se ajustaron los parámetros de ruido del modelo de movimiento
+(\texttt{alpha1}, \texttt{alpha2}) y del modelo de sensor
+(\texttt{sigma\_hit}, \texttt{z\_hit}, \texttt{transform\_tolerance}) para
+compensar el ruido real del hardware.
+
+\section{Cambios en LiDAR, TF, Odometría y Tiempos}
+
+\subsection{LiDAR}
+En simulación el LiDAR era perfecto y sin ruido. En hardware real se presentaron:
+
+\begin{itemize}
+  \item Ruido en las mediciones.
+  \item Menor alcance efectivo.
+  \item Errores por reflexión en superficies.
+  \item Retrasos en la publicación de scans.
+\end{itemize}
+
+\subsection{Odometría}
+En simulación la odometría era perfecta y sin deriva. En hardware real se usa
+\textit{dead reckoning}, lo que introduce acumulación de error con el tiempo.
+Por ello, la fusión con AMCL y SLAM Toolbox es esencial para corregir la deriva.
+
+\subsection{Sincronización de Tiempo}
+Durante la migración se detectó que la Jetson tenía una fecha incorrecta y no
+estaba sincronizada con la laptop. Esto provocaba errores de TF, problemas en
+Nav2, retrasos en el LiDAR y timestamps inválidos.
+
+\textbf{Solución:} Se configuró la laptop como servidor NTP local usando
+\texttt{chrony} y la Jetson se configuró con \texttt{systemd-timesyncd}
+apuntando a la IP de la laptop en la red \texttt{10.42.0.x}.
+
+Configuración en la laptop:
+
+\begin{lstlisting}
+sudo apt install chrony
+
+# En /etc/chrony/chrony.conf agregar:
+allow 10.42.0.0/24
+local stratum 10
+
+sudo systemctl restart chrony
+\end{lstlisting}
+
+Configuración en la Jetson:
+
+\begin{lstlisting}
+# En /etc/systemd/timesyncd.conf agregar:
+[Time]
+NTP=10.42.0.X
+FallbackNTP=pool.ntp.org
+
+sudo systemctl restart systemd-timesyncd
+timedatectl status
+
+# Resultado esperado:
+# System clock synchronized: yes
+\end{lstlisting}
+
+Después de la sincronización desaparecieron los errores de TF, Nav2 se
+estabilizó, AMCL funcionó correctamente y los scans del LiDAR coincidieron
+con el mapa.
+
+\subsection{Instalación Incorrecta de Xacro y Reflasheo de la Jetson}
+
+\subsubsection{Origen del problema}
+
+Durante la migración, al detectar que el ejecutable \texttt{xacro} no estaba
+disponible en la Jetson, se intentó instalarlo mediante:
+
+\begin{lstlisting}
+pip install xacro
+\end{lstlisting}
+
+Esta instalación global corrompió dependencias internas del entorno ROS~2
+Humble en Ubuntu 20.04, dejando el sistema en un estado inconsistente. La única
+solución viable fue \textbf{reflashear completamente la Jetson Nano}.
+
+\subsubsection{Proceso de reflasheo de la Jetson Nano}
+
+El proceso de flasheo consiste en escribir la imagen oficial del Puzzlebot en
+una tarjeta microSD y reconfigurar la Hackerboard.
+
+\textbf{Materiales necesarios:} monitor, teclado, mouse y lector de microSD.
+
+\textbf{Paso 1 — Flashear la Hackerboard.}
+Descargar el firmware desde el repositorio de Manchester Robotics
+(\texttt{FirmwareBin.zip}). Conectar la Hackerboard a la computadora mediante
+microUSB con el selector de alimentación en posición USB y el interruptor
+principal encendido. Ejecutar \texttt{FirmwareFlash.exe}, ingresar el SSID del
+equipo y dejar la contraseña por defecto \texttt{Puzzlebot72}.
+
+\textbf{Paso 2 — Configurar la Hackerboard vía navegador.}
+Desde una computadora conectada a la red WiFi del robot, acceder a la IP
+mostrada en el LCD. Configurar el modo de control a \textit{Robot Velocities
+(v and w)}, verificar que el parámetro \texttt{Width} sea \texttt{0.19}~m y
+cambiar \texttt{ROS~$\to$~CommType} a \texttt{2}.
+
+\textbf{Paso 3 — Flashear la microSD con la imagen de la Jetson.}
+Descargar \texttt{jetson\_2gb\_ubuntu20.zip} y usar Balena Etcher para
+escribir la imagen en la microSD.
+
+\subsubsection{Instalación correcta de xacro vía monitor}
+
+Una vez reflasheada la Jetson, la forma correcta de instalar \texttt{xacro}
+es mediante el gestor de paquetes de ROS~2, no con pip.
+
+\begin{lstlisting}
+# Abrir terminal de la Jetson
+ctrl + alt + t
+
+# Actualizar repositorios e instalar xacro
+sudo apt update
+sudo apt install -y ros-humble-xacro
+
+# Verificar instalacion
+source /opt/ros/humble/setup.bash
+which xacro
+
+# Resultado esperado:
+# /opt/ros/humble/bin/xacro
+\end{lstlisting}
+
+Si los repositorios de ROS~2 Humble no están disponibles, agregar el
+repositorio oficial:
+
+\begin{lstlisting}
+sudo curl -sSL \
+  https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
+  -o /usr/share/keyrings/ros-archive-keyring.gpg
+
+echo "deb [arch=$(dpkg --print-architecture) \
+  signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
+  http://packages.ros.org/ros2/ubuntu \
+  $(. /etc/os-release && echo $UBUNTU_CODENAME) main" \
+  | sudo tee /etc/apt/sources.list.d/ros2.list
+
+sudo apt update
+sudo apt install -y ros-humble-xacro
+\end{lstlisting}
+
+\textbf{Advertencias:} no usar \texttt{pip install} para instalar paquetes que
+forman parte del ecosistema ROS~2.
+
+\section{Ejecución de SLAM en Hardware Real}
+
+Para ejecutar SLAM en el robot físico se siguen los siguientes pasos.
+
+\textbf{1. Bringup del hardware:}
+
+\begin{lstlisting}
+./scripts/real_robot_core.launch.xml
+\end{lstlisting}
+
+\textbf{2. Lanzamiento de SLAM:}
+
+\begin{lstlisting}
+ros2 launch puzzlebot_real_robot \
+  slam_real.launch.xml
+\end{lstlisting}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.48\textwidth]{slam.png}
+\caption{Construcción del mapa mediante SLAM Toolbox utilizando datos reales del LiDAR y teleoperación manual del robot.}
+\label{fig:slam_real}
+\end{figure}
+
+\textbf{3. Edición de mapa generado usando GIMP:}
+
+\begin{lstlisting}
+GIMP
+Manual adjusted
+\end{lstlisting}
+
+El robot construyó un mapa del entorno físico usando LiDAR, odometría y SLAM
+Toolbox, que posteriormente fue guardado y detallado con GIMP para usarse en
+navegación.
+
+
+\section{Ejecución de Navegación en Hardware Real}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.50\textwidth]{real_environment.png}
+\caption{Validación experimental del sistema de navegación autónoma en el entorno físico. La imagen muestra el laberinto real utilizado durante las pruebas junto con la visualización simultánea en RViz del mapa, localización y costmaps de Nav2.}
+\label{fig:real_environment}
+\end{figure}
+
+
+\textbf{1. Lanzamiento de navegación:}
+
+\begin{lstlisting}
+ros2 launch puzzlebot_real_robot \
+  nav2_real.launch.xml
+\end{lstlisting}
+
+\textbf{2. Envío de meta de navegación:}
+
+\begin{lstlisting}
+ros2 launch puzzlebot_real_robot \
+  Click Nav2 Goal Function \
+  Click inside the map RVIZ
+\end{lstlisting}
+
+El robot logró localizarse usando AMCL, planear rutas con Nav2 y navegar
+autónomamente hasta la meta indicada.
+
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.25\textwidth]{2dgoalpose.png}
+\caption{Visualización en RViz del mapa, costmaps y localización del robot durante la ejecución de navegación autónoma con Nav2. Además de la selección de meta de navegación mediante la herramienta \textit{2D Goal Pose} en RViz.}
+\label{fig:goal_pose}
+\end{figure}
+
+
+\section{Problemas Encontrados y Soluciones}
+
+La Tabla~\ref{tab:problemas} resume los principales problemas encontrados
+durante la migración y sus soluciones.
+
+\begin{table}[htbp]
+\caption{Problemas encontrados y soluciones aplicadas}
+\label{tab:problemas}
+\begin{tabular}{p{2.0cm} p{2.6cm} p{2.6cm}}
+\toprule
+\textbf{Problema} & \textbf{Síntoma} & \textbf{Solución} \\
+\midrule
+\texttt{use\_sim\_time} incorrecto &
+AMCL no funcionaba &
+Cambiar a \texttt{false} \\
+\addlinespace
+Drift en odometría &
+Robot se desviaba &
+Ajustar constantes $k_r$ y $k_l$ \\
+\addlinespace
+TF timeout &
+Errores de transformación &
+Aumentar \texttt{transform\_tolerance} \\
+\addlinespace
+Desincronización de tiempo &
+Errores de timestamps &
+NTP local con chrony y systemd-timesyncd \\
+\addlinespace
+Falta de xacro en Jetson &
+\texttt{pip install xacro} corrompió el entorno ROS~2 &
+Reflasheo completo de la Jetson; instalar con \texttt{apt} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Conclusión}
+
+La migración del Puzzlebot de simulación a hardware real fue exitosa. Se logró
+reutilizar la mayor parte del proyecto original, mantener una arquitectura
+modular, separar claramente los componentes de simulación y hardware, y
+ejecutar tanto SLAM como navegación autónoma en el robot físico.
+
+El proceso permitió comprender problemas reales de integración en sistemas
+robóticos embebidos, incluyendo sincronización distribuida de tiempo,
+configuración de networking, dependencias faltantes en hardware embebido,
+diferencias entre sensores simulados y físicos, y calibración de navegación
+bajo ruido real.
+
+Futuras mejoras podrían incluir la fusión de odometría con IMU mediante el
+paquete \texttt{robot\_localization}, el uso de SLAM con loop closure y la
+incorporación de controladores de velocidad más robustos al ruido de encoders.
+
+\section*{Repositorio GitHub}
+
+El repositorio público del equipo está disponible en:
+
+\begin{center}
+\url{https://github.com/RoberttCap/XRCX_Puzzlebot_ROS2}
+\end{center}
+
+El repositorio contiene los paquetes ROS~2, launch files, configuración de
+Nav2, scripts y documentación del proyecto.
+
+\section*{Link de Video de Evidencia}
+
+La demo de demostración del funcionamiento se encuentra en:
+
+\begin{center}
+\url{https://youtu.be/etLLxQhERjQ}
+\end{center}
+
+Este video muestra el lanzamiento del modo de navegación, la estimación de la
+pose con la orientación del robot para darle un marco de referencia, y
+posteriormente la navegación autónoma usando la función Nav2 Goal.
+
+\bibliographystyle{IEEEtran}
+\begin{thebibliography}{00}
+
+\bibitem{macenski2022nav2}
+S. Macenski, T. Foote, B. Gerkey, C. Lalancette, and W. Woodall,
+``Robot Operating System 2: Design, architecture, and uses in the wild,''
+\textit{Science Robotics}, vol. 7, no. 66, 2022.
+
+\bibitem{koenig2004gazebo}
+N. Koenig and A. Howard,
+``Design and use paradigms for Gazebo, an open-source multi-robot simulator,''
+in \textit{IEEE/RSJ Int. Conf. on Intelligent Robots and Systems (IROS)},
+2004, pp. 2149--2154.
+
+\bibitem{macenski2021slam}
+S. Macenski and I. Jambrecic,
+``SLAM Toolbox: SLAM for the dynamic world,''
+\textit{Journal of Open Source Software}, vol. 6, no. 61, p. 2783, 2021.
+
+\bibitem{dellaert1999amcl}
+F. Dellaert, D. Fox, W. Burgard, and S. Thrun,
+``Monte Carlo localization for mobile robots,''
+in \textit{IEEE Int. Conf. on Robotics and Automation (ICRA)},
+1999, pp. 1322--1328.
+
+\bibitem{slamtoolbox}
+S. Macenski, \textit{SLAM Toolbox for ROS 2}, GitHub, 2023.
+[Online]. Available: \url{https://github.com/SteveMacenski/slam_toolbox}
+
+\bibitem{microros}
+P. Boehlau et al., ``micro-ROS: ROS 2 on microcontrollers,''
+in \textit{ROSCon 2020}, 2020.
+
+\bibitem{chronydoc}
+Chrony Project, \textit{Chrony Documentation (NTP synchronization)},
+2023. [Online]. Available: \url{https://chrony.tuxfamily.org/documentation.html}
+
+\bibitem{ros2time}
+Open Robotics, \textit{ROS~2 Time and Clock Documentation},
+2023. [Online]. Available:
+\url{https://docs.ros.org/en/humble/Concepts/Time.html}
+
+\bibitem{tf2doc}
+Open Robotics, \textit{TF2 Documentation},
+2023. [Online]. Available:
+\url{https://docs.ros.org/en/humble/Concepts/Intermediate/About-Tf2.html}
+
+\bibitem{rplidara1}
+Slamtec, \textit{RPLiDAR A1 User Manual},
+2022. [Online]. Available: \url{https://www.slamtec.com/en/Lidar/A1}
+
+\bibitem{manchesterros}
+Manchester Robotics, \textit{Puzzlebot ROS Repository}, GitHub, 2023.
+[Online]. Available:
+\url{https://github.com/ManchesterRoboticsLtd/puzzlebot_ros}
+
+\end{thebibliography}
+
+\end{document}

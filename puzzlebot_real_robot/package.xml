@@ -3,7 +3,7 @@
 <package format="3">
   <name>puzzlebot_real_robot</name>
   <version>0.0.0</version>
-  <description>Real robot stack for Puzzlebot - REAL ROBOT</description>
+  <description>Stack para el robot físico Puzzlebot. Incluye configuración y nodos para hardware real, integración con micro-ROS, RPLiDAR y navegación distribuida. Uso recomendado: Jetson ejecuta hardware y PC ejecuta SLAM/Navegación.</description>
   <maintainer email="team@puzzlebot.local">Puzzlebot Team</maintainer>
   <license>MIT</license>
 
@@ -26,7 +26,7 @@
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
-  <exec_depend>python3-numpy</exec_depend>
+
   <exec_depend>tf2_ros</exec_depend>
 
 
