@@ -33,7 +33,7 @@
   <arg name="left_wheel_scale" default="1.0"/>
   <arg name="publish_odom_tf" default="true"/>
 
-  <include file="$(find-pkg-share puzzlebot_real_robot)/launch/real_robot_core.launch.xml">
+  <include if="$(var bringup_core)" file="$(find-pkg-share puzzlebot_real_robot)/launch/real_robot_core.launch.xml">
     <arg name="use_sim_time" value="$(var use_sim_time)"/>
     <arg name="use_micro_ros" value="$(var use_micro_ros)"/>
     <arg name="use_rplidar" value="$(var use_rplidar)"/>
