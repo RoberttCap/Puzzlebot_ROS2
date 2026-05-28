@@ -4,10 +4,11 @@
        hardware + dead-reckoning odometry + TF first, then Nav2/AMCL. -->
 
   <arg name="use_sim_time" default="false"/>
-  <arg name="map" default="$(find-pkg-share puzzlebot_real_robot)/maps/map_maze_real.yaml"/>
+  <arg name="map" default="$(find-pkg-share puzzlebot_real_robot)/maps/map.yaml"/>
   <arg name="autostart" default="true"/>
   <arg name="use_composition" default="False"/>
   <arg name="nav2_start_delay" default="4.0"/>
+  <arg name="bringup_core" default="true"/>
 
   <!-- Hardware driver switches -->
   <arg name="use_micro_ros" default="true"/>
