@@ -1,4 +1,4 @@
-image: map_maze_real.pgm
+image: map.pgm
 mode: trinary
 resolution: 0.05
 origin: [-1.65, -2.16125, 0]
