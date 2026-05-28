@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="use_sim_time" default="false"/>
+  <arg name="map" default="$(find-pkg-share puzzlebot_real_robot)/maps/map.yaml"/>
+  <arg name="autostart" default="true"/>
+  <arg name="use_composition" default="False"/>
+  <arg name="nav2_rviz" default="true"/>
+
+  <include file="$(find-pkg-share puzzlebot_navigation)/launch/nav2_core.launch.xml">
+    <arg name="use_sim_time" value="$(var use_sim_time)"/>
+    <arg name="map_path" value="$(var map)"/>
+    <arg name="nav2_params_file" value="$(find-pkg-share puzzlebot_real_robot)/config/nav2_params_real.yaml"/>
+    <arg name="nav2_rviz_config_path" value="$(find-pkg-share puzzlebot_navigation)/rviz/nav2.rviz"/>
+    <arg name="autostart" value="$(var autostart)"/>
+    <arg name="use_composition" value="$(var use_composition)"/>
+    <arg name="rviz" value="$(var nav2_rviz)"/>
+  </include>
+</launch>
