@@ -6,9 +6,7 @@
     <arg name="urdf_path" default="$(find-pkg-share puzzlebot_description)/urdf/puzzlebot.xacro" />
     <arg name="rviz_config_path" default="$(find-pkg-share puzzlebot_description)/rviz/puzzlebot_description.rviz" />
 
-    <let name="gazebo_path" value="$(find-pkg-share ros_gz_sim)/launch/gz_sim.launch.py" /> 
-    <!-- Este es para gazebo garden, instalar gazebo garden con
-    las especificaciones de la primer actividad de juanma ledesma -->
+    <!-- El include de gazebo solo se ejecuta si gazebo:=true -->
 
     <node pkg="robot_state_publisher" exec="robot_state_publisher">
         <param name="use_sim_time" value="$(var use_sim_time)" />
@@ -21,10 +19,8 @@
 
     <node pkg="joint_state_publisher_gui" exec="joint_state_publisher_gui" if="$(var joint_gui)" output="screen" />
 
-    <include file="$(var gazebo_path)" if="$(var gazebo)">
+
+    <include if="$(var gazebo)" file="$(find-pkg-share ros_gz_sim)/launch/gz_sim.launch.py">
         <arg name="gz_args" value="empty.sdf -r" />
     </include>
-
-    <node pkg="ros_gz_sim" exec="create" output="screen" if="$(var gazebo)" args="-name puzzlebot -topic robot_description" />
-
 </launch>
