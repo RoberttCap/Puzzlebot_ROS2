@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
   <arg name="use_sim_time" default="false"/>
-  <arg name="map" default="$(find-pkg-share puzzlebot_real_robot)/maps/map.yaml"/>
+  <arg name="map" default="$(find-pkg-share puzzlebot_real_robot)/maps/map_maze_real.yaml"/>
   <arg name="autostart" default="true"/>
   <arg name="use_composition" default="False"/>
   <arg name="nav2_rviz" default="true"/>
