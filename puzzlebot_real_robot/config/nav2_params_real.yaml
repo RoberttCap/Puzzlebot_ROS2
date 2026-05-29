@@ -102,11 +102,11 @@ controller_server:
       yaw_goal_tolerance: 0.10 #relevant
     FollowPath:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController" #relevant
-      desired_linear_vel: 0.22 #relevant
+      desired_linear_vel: 0.30 #relevant
       min_approach_linear_velocity: 0.05 #relevant
-      lookahead_dist: 0.25 #relevant
+      lookahead_dist: 0.32 #relevant
       min_lookahead_dist: 0.15 #relevant
-      max_lookahead_dist: 0.35 #relevant
+      max_lookahead_dist: 0.45 #relevant
       lookahead_time: 1.2 #relevant
       use_velocity_scaled_lookahead_dist: true
       rotate_to_heading_angular_vel: 0.60 #relevant
@@ -146,8 +146,8 @@ local_costmap:
       plugins: ["obstacle_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 0.18
-        cost_scaling_factor: 3.0
+        inflation_radius: 0.10
+        cost_scaling_factor: 1.5
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: true
@@ -191,7 +191,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         inflation_radius: 0.15
-        cost_scaling_factor: 3.0
+        cost_scaling_factor: 1.5
       always_send_full_costmap: true
 
 map_server:
